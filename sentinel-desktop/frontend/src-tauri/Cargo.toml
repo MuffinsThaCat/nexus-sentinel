@@ -1,0 +1,77 @@
+[package]
+name = "beaver-warrior-desktop"
+version = "0.2.0"
+description = "Beaver Warrior — Comprehensive Local Security Suite"
+authors = ["Tal Zisckind"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.4", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.10.0", features = ["tray-icon"] }
+tauri-plugin-log = "2"
+tauri-plugin-notification = "2"
+tokio = { version = "1.35", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+parking_lot = "0.12"
+tracing = "0.1"
+sysinfo = "0.30"
+sha2 = "0.10"
+hex = "0.4"
+uuid = { version = "1", features = ["v4"] }
+dirs = "5"
+reqwest = { version = "0.12", features = ["json"] }
+open = "5"
+rand = "0.8"
+
+# Sentinel crates — path references to the workspace
+sentinel-core = { path = "../../../sentinel-core" }
+sentinel-network = { path = "../../../sentinel-network" }
+sentinel-endpoint = { path = "../../../sentinel-endpoint" }
+sentinel-dns = { path = "../../../sentinel-dns" }
+sentinel-email = { path = "../../../sentinel-email" }
+sentinel-siem = { path = "../../../sentinel-siem" }
+sentinel-identity = { path = "../../../sentinel-identity" }
+sentinel-iot = { path = "../../../sentinel-iot" }
+sentinel-data = { path = "../../../sentinel-data" }
+sentinel-threat-intel = { path = "../../../sentinel-threat-intel" }
+sentinel-forensics = { path = "../../../sentinel-forensics" }
+sentinel-vuln = { path = "../../../sentinel-vuln" }
+sentinel-web = { path = "../../../sentinel-web" }
+sentinel-container = { path = "../../../sentinel-container" }
+sentinel-supply-chain = { path = "../../../sentinel-supply-chain" }
+sentinel-compliance = { path = "../../../sentinel-compliance" }
+sentinel-privacy = { path = "../../../sentinel-privacy" }
+sentinel-ai = { path = "../../../sentinel-ai" }
+sentinel-deception = { path = "../../../sentinel-deception" }
+sentinel-browser = { path = "../../../sentinel-browser" }
+sentinel-api = { path = "../../../sentinel-api" }
+sentinel-vpn = { path = "../../../sentinel-vpn" }
+sentinel-hardware = { path = "../../../sentinel-hardware" }
+sentinel-exfiltration = { path = "../../../sentinel-exfiltration" }
+sentinel-mgmt = { path = "../../../sentinel-mgmt" }
+sentinel-selfprotect = { path = "../../../sentinel-selfprotect" }
+sentinel-phishing = { path = "../../../sentinel-phishing" }
+sentinel-crypto = { path = "../../../sentinel-crypto" }
+sentinel-resilience = { path = "../../../sentinel-resilience" }
+sentinel-mobile = { path = "../../../sentinel-mobile" }
+sentinel-darkweb = { path = "../../../sentinel-darkweb" }
+sentinel-ot = { path = "../../../sentinel-ot" }
+sentinel-microseg = { path = "../../../sentinel-microseg" }
+sentinel-backup = { path = "../../../sentinel-backup" }
+sentinel-cloud = { path = "../../../sentinel-cloud" }
+sentinel-time = { path = "../../../sentinel-time" }
+sentinel-soceng = { path = "../../../sentinel-soceng" }
+sentinel-regulatory = { path = "../../../sentinel-regulatory" }
+sentinel-ops = { path = "../../../sentinel-ops" }
+tauri-plugin-shell = "2"

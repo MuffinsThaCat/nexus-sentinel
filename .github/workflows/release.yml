@@ -1,0 +1,97 @@
+name: Build & Release Beaver Warrior
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            label: macOS-arm64
+          - platform: macos-13
+            target: x86_64-apple-darwin
+            label: macOS-x64
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            label: Linux-x64
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: Windows-x64
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Linux dependencies for Tauri
+      - name: Install Linux deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action/setup@v1
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: sentinel-desktop/frontend/src-tauri -> target
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend deps
+        working-directory: sentinel-desktop/frontend
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+        with:
+          projectPath: sentinel-desktop/frontend
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Beaver Warrior ${{ github.ref_name }}'
+          releaseBody: |
+            v0.2.0 — 31 AI Agent Security modules with memory breakthroughs.
+            38 security domains, 256 modules total.
+
+            **Download for your platform below.**
+          releaseDraft: false
+          prerelease: false
+          args: --target ${{ matrix.target }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BeaverWarrior-${{ matrix.label }}
+          path: |
+            sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app
+            sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+            sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe

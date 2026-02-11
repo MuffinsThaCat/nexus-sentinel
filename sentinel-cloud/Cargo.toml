@@ -1,0 +1,17 @@
+[package]
+name = "sentinel-cloud"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sentinel-core = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+bytes = { workspace = true }
+parking_lot = { workspace = true }
+dashmap = { workspace = true }

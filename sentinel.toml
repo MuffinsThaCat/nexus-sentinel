@@ -1,0 +1,343 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  Nexus Sentinel — Configuration                                     ║
+# ║  Comprehensive Local Security Suite with 13 Memory Breakthroughs    ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+
+[general]
+# Total memory budget for all security components (MB)
+memory_budget_mb = 512
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+# Snapshot directory for persistence
+snapshot_dir = "~/.beaver-warrior/snapshots"
+# Snapshot interval in seconds (0 = disabled)
+snapshot_interval_secs = 300
+# Enable the event bus for inter-component communication
+event_bus_enabled = true
+
+# ── Core Memory Optimization Settings ─────────────────────────────────
+
+[core]
+total_memory_budget = 536870912  # 512 MB
+verifier_enabled = true
+
+[core.tiered_cache]
+hot_fraction = 0.382       # φ⁻² — golden ratio optimized
+warm_fraction = 0.236      # φ⁻¹ - φ⁻²
+compress_cold = true
+promote_threshold = 3
+demote_after_secs = 300
+
+[core.compression]
+algorithm = "Lz4"
+level = 4
+
+[core.differential]
+max_diff_chain = 64
+compress_diffs = true
+
+[core.paged]
+page_size = 4096
+max_resident_pages = 1024
+eviction = "PhiWeighted"
+
+# ── I/O Adapters ──────────────────────────────────────────────────────
+
+[io]
+# Network packet capture interface (empty = disabled)
+capture_interface = ""
+# File system paths to watch for changes
+watch_paths = ["/etc", "/usr/local/etc"]
+# Webhook listener for external integrations
+webhook_enabled = false
+webhook_bind = "127.0.0.1:9090"
+# Syslog listener
+syslog_enabled = false
+syslog_bind = "127.0.0.1:1514"
+
+# ── Security Layer Configuration ──────────────────────────────────────
+
+[network]
+enabled = true
+firewall_enabled = true
+ids_mode = "detection"          # detection, prevention, or disabled
+flow_monitor_window = 1000
+connection_tracker_enabled = true
+
+[endpoint]
+enabled = true
+process_monitor_enabled = true
+file_integrity_enabled = true
+file_integrity_paths = ["/usr/bin", "/usr/sbin", "/etc"]
+registry_monitor_enabled = true
+
+[dns]
+enabled = true
+sinkhole_enabled = true
+sinkhole_domains = []           # populated from threat intel
+tunnel_detection_enabled = true
+cache_size = 50000
+
+[email]
+enabled = true
+spam_filter_enabled = true
+attachment_scanner_enabled = true
+dkim_verifier_enabled = true
+max_attachment_size_mb = 25
+
+[identity]
+enabled = true
+auth_manager_enabled = true
+mfa_enabled = true
+sso_enabled = true
+rbac_enabled = true
+session_timeout_secs = 3600
+max_failed_attempts = 5
+lockout_duration_secs = 900
+
+[iot]
+enabled = true
+device_discovery_enabled = true
+protocol_analyzer_enabled = true
+firmware_scanner_enabled = true
+
+[data]
+enabled = true
+dlp_enabled = true
+classifier_enabled = true
+tokenizer_enabled = true
+
+[threat_intel]
+enabled = true
+feed_urls = []
+update_interval_secs = 3600
+ioc_cache_size = 100000
+
+[forensics]
+enabled = true
+memory_analyzer_enabled = true
+timeline_builder_enabled = true
+evidence_collector_enabled = true
+
+[vuln]
+enabled = true
+scanner_enabled = true
+patch_tracker_enabled = true
+exploit_detector_enabled = true
+
+[web]
+enabled = true
+waf_enabled = true
+xss_detector_enabled = true
+sqli_detector_enabled = true
+csrf_protector_enabled = true
+
+[container]
+enabled = true
+image_scanner_enabled = true
+runtime_monitor_enabled = true
+registry_auditor_enabled = true
+
+[supply_chain]
+enabled = true
+sbom_analyzer_enabled = true
+dependency_auditor_enabled = true
+signature_verifier_enabled = true
+
+[compliance]
+enabled = true
+policy_engine_enabled = true
+audit_logger_enabled = true
+frameworks = ["NIST", "CIS", "SOC2", "ISO27001"]
+
+[privacy]
+enabled = true
+consent_manager_enabled = true
+data_mapper_enabled = true
+anonymizer_enabled = true
+
+[ai]
+enabled = true
+model_scanner_enabled = true
+prompt_guard_enabled = true
+local_sandbox_enabled = true
+shadow_ai_detector_enabled = true
+api_key_monitor_enabled = true
+
+[deception]
+enabled = true
+honeypot_count = 5
+canary_token_enabled = true
+dns_canary_enabled = true
+honey_file_enabled = true
+
+[browser]
+enabled = true
+extension_scanner_enabled = true
+cookie_auditor_enabled = true
+download_scanner_enabled = true
+
+[api]
+enabled = true
+rate_limiter_enabled = true
+schema_validator_enabled = true
+graphql_blocker_enabled = true
+
+[vpn]
+enabled = true
+tunnel_monitor_enabled = true
+split_tunnel_detector_enabled = true
+
+[hardware]
+enabled = true
+usb_monitor_enabled = true
+bios_integrity_enabled = true
+tpm_verifier_enabled = true
+
+[exfiltration]
+enabled = true
+dns_exfil_detector_enabled = true
+steganography_detector_enabled = true
+covert_channel_detector_enabled = true
+
+# ── New Security Layers ───────────────────────────────────────────────
+
+[mgmt]
+enabled = true
+dashboard_enabled = true
+api_gateway_enabled = true
+api_gateway_bind = "127.0.0.1:8443"
+health_check_interval_secs = 60
+
+[selfprotect]
+enabled = true
+binary_integrity_check_secs = 300
+config_protection_enabled = true
+anti_tampering_enabled = true
+secure_updates_enabled = true
+
+[phishing]
+enabled = true
+lookalike_domain_enabled = true
+link_scanner_enabled = true
+qr_scanner_enabled = true
+vishing_detector_enabled = true
+
+[crypto]
+enabled = true
+tls_auditor_enabled = true
+ca_monitor_enabled = true
+key_rotation_check_secs = 3600
+quantum_readiness_enabled = true
+
+[resilience]
+enabled = true
+auto_quarantine_enabled = true
+rollback_enabled = true
+dr_test_interval_secs = 86400
+kill_switch_enabled = true
+
+[mobile]
+enabled = true
+app_permission_auditor_enabled = true
+network_traffic_monitor_enabled = true
+sim_swap_detector_enabled = true
+mdm_enabled = true
+rogue_app_store_enabled = true
+
+[darkweb]
+enabled = true
+breach_credential_monitor_enabled = true
+domain_reputation_enabled = true
+exposed_service_detector_enabled = true
+ct_watcher_enabled = true
+
+[ot]
+enabled = true
+scada_monitor_enabled = true
+plc_integrity_enabled = true
+serial_monitor_enabled = true
+safety_validator_enabled = true
+# Modbus/DNP3 interfaces to monitor
+scada_interfaces = []
+
+[microseg]
+enabled = true
+zero_trust_enabled = true
+lateral_movement_detector_enabled = true
+micro_perimeter_enabled = true
+
+[backup]
+enabled = true
+integrity_verifier_enabled = true
+retention_manager_enabled = true
+encryption_auditor_enabled = true
+
+[cloud]
+enabled = true
+iam_auditor_enabled = true
+storage_scanner_enabled = true
+serverless_monitor_enabled = true
+network_exposure_enabled = true
+# Cloud provider: aws, gcp, azure, or empty
+provider = ""
+
+[time]
+enabled = true
+ntp_monitor_enabled = true
+timestamp_validator_enabled = true
+max_drift_ms = 1000
+
+[soceng]
+enabled = true
+pretexting_detector_enabled = true
+impersonation_detector_enabled = true
+awareness_tracker_enabled = true
+
+[regulatory]
+enabled = true
+gdpr_monitor_enabled = true
+hipaa_monitor_enabled = true
+pci_scanner_enabled = true
+
+[ops]
+enabled = true
+runbook_engine_enabled = true
+sla_tracker_enabled = true
+ticket_integrator_enabled = true
+# Ticket system webhook URL
+ticket_webhook_url = ""
+
+# ── Pipeline Definitions ──────────────────────────────────────────────
+
+[[pipelines]]
+name = "lateral_movement_response"
+description = "Detect lateral movement → quarantine → create ticket"
+trigger_category = "Detection"
+trigger_severity_min = "High"
+trigger_tags = ["lateral-movement", "network"]
+enabled = true
+
+[[pipelines]]
+name = "malware_containment"
+description = "Malware detected → quarantine device → snapshot → ticket"
+trigger_category = "Detection"
+trigger_severity_min = "Critical"
+trigger_tags = ["malware", "endpoint"]
+enabled = true
+
+[[pipelines]]
+name = "data_exfiltration_response"
+description = "Exfiltration detected → block → forensic capture → alert"
+trigger_category = "Detection"
+trigger_severity_min = "High"
+trigger_tags = ["exfiltration", "dlp"]
+enabled = true
+
+[[pipelines]]
+name = "compliance_violation"
+description = "Compliance gap → create ticket → notify → track SLA"
+trigger_category = "Detection"
+trigger_severity_min = "Medium"
+trigger_tags = ["compliance", "regulatory"]
+enabled = true

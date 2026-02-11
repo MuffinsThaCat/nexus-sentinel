@@ -1,0 +1,173 @@
+[workspace]
+resolver = "2"
+exclude = ["sentinel-desktop"]
+members = [
+    "sentinel-core",
+    "sentinel-network",
+    "sentinel-endpoint",
+    "sentinel-dns",
+    "sentinel-email",
+    "sentinel-siem",
+    "sentinel-identity",
+    "sentinel-iot",
+    "sentinel-data",
+    "sentinel-threat-intel",
+    "sentinel-forensics",
+    "sentinel-vuln",
+    "sentinel-web",
+    "sentinel-container",
+    "sentinel-supply-chain",
+    "sentinel-compliance",
+    "sentinel-privacy",
+    "sentinel-ai",
+    "sentinel-deception",
+    "sentinel-browser",
+    "sentinel-api",
+    "sentinel-vpn",
+    "sentinel-hardware",
+    "sentinel-exfiltration",
+    "sentinel-app",
+    "sentinel-mgmt",
+    "sentinel-selfprotect",
+    "sentinel-phishing",
+    "sentinel-crypto",
+    "sentinel-resilience",
+    "sentinel-mobile",
+    "sentinel-darkweb",
+    "sentinel-ot",
+    "sentinel-microseg",
+    "sentinel-backup",
+    "sentinel-cloud",
+    "sentinel-time",
+    "sentinel-soceng",
+    "sentinel-regulatory",
+    "sentinel-ops",
+    "sentinel-license-server",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Nexus Sentinel Team"]
+license = "MIT"
+description = "Nexus Sentinel — Comprehensive Local Security Suite with Memory Breakthroughs"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Memory-mapped I/O
+memmap2 = "0.9"
+
+# Compression
+flate2 = "1.0"
+lz4_flex = "0.11"
+
+# Hashing
+blake3 = "1.5"
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+
+# Concurrent data structures
+dashmap = "5.5"
+crossbeam = "0.8"
+parking_lot = "0.12"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Networking
+socket2 = "0.5"
+pnet = "0.35"
+dns-parser = "0.8"
+
+# HTTP / Web
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+hyper = { version = "1.1", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Regex
+regex = "1.10"
+aho-corasick = "1.1"
+
+# System info
+sysinfo = "0.30"
+nix = { version = "0.27", features = ["net", "process", "signal"] }
+
+# Byte manipulation
+bytes = "1.5"
+byteorder = "1.5"
+
+# Random
+rand = "0.8"
+
+# UUID
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# IP / Network
+ipnetwork = "0.20"
+cidr-utils = "0.6"
+
+# Glob / Path matching
+glob = "0.3"
+
+# Notify (file watching)
+notify = "6.1"
+
+# Internal crates
+sentinel-core = { path = "sentinel-core" }
+sentinel-network = { path = "sentinel-network" }
+sentinel-endpoint = { path = "sentinel-endpoint" }
+sentinel-dns = { path = "sentinel-dns" }
+sentinel-email = { path = "sentinel-email" }
+sentinel-siem = { path = "sentinel-siem" }
+sentinel-identity = { path = "sentinel-identity" }
+sentinel-iot = { path = "sentinel-iot" }
+sentinel-data = { path = "sentinel-data" }
+sentinel-threat-intel = { path = "sentinel-threat-intel" }
+sentinel-forensics = { path = "sentinel-forensics" }
+sentinel-vuln = { path = "sentinel-vuln" }
+sentinel-web = { path = "sentinel-web" }
+sentinel-container = { path = "sentinel-container" }
+sentinel-supply-chain = { path = "sentinel-supply-chain" }
+sentinel-compliance = { path = "sentinel-compliance" }
+sentinel-privacy = { path = "sentinel-privacy" }
+sentinel-ai = { path = "sentinel-ai" }
+sentinel-deception = { path = "sentinel-deception" }
+sentinel-browser = { path = "sentinel-browser" }
+sentinel-api = { path = "sentinel-api" }
+sentinel-vpn = { path = "sentinel-vpn" }
+sentinel-hardware = { path = "sentinel-hardware" }
+sentinel-exfiltration = { path = "sentinel-exfiltration" }
+sentinel-mgmt = { path = "sentinel-mgmt" }
+sentinel-selfprotect = { path = "sentinel-selfprotect" }
+sentinel-phishing = { path = "sentinel-phishing" }
+sentinel-crypto = { path = "sentinel-crypto" }
+sentinel-resilience = { path = "sentinel-resilience" }
+sentinel-mobile = { path = "sentinel-mobile" }
+sentinel-darkweb = { path = "sentinel-darkweb" }
+sentinel-ot = { path = "sentinel-ot" }
+sentinel-microseg = { path = "sentinel-microseg" }
+sentinel-backup = { path = "sentinel-backup" }
+sentinel-cloud = { path = "sentinel-cloud" }
+sentinel-time = { path = "sentinel-time" }
+sentinel-soceng = { path = "sentinel-soceng" }
+sentinel-regulatory = { path = "sentinel-regulatory" }
+sentinel-ops = { path = "sentinel-ops" }

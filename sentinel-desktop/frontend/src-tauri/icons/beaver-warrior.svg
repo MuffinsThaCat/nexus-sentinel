@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="fur" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a16207"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <linearGradient id="helmet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+    <linearGradient id="crest" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a5f3fc"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="250" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#22d3ee" stroke-width="3" opacity="0.2"/>
+
+  <!-- Ears -->
+  <ellipse cx="120" cy="135" rx="42" ry="35" fill="url(#fur)"/>
+  <ellipse cx="120" cy="135" rx="28" ry="22" fill="#d97706" opacity="0.5"/>
+  <ellipse cx="392" cy="135" rx="42" ry="35" fill="url(#fur)"/>
+  <ellipse cx="392" cy="135" rx="28" ry="22" fill="#d97706" opacity="0.5"/>
+
+  <!-- Head -->
+  <path d="M128 140 C128 95, 175 65, 256 65 C337 65, 384 95, 384 140 L384 280 C384 345, 330 390, 256 390 C182 390, 128 345, 128 280 Z" fill="url(#fur)"/>
+
+  <!-- Lighter face area -->
+  <path d="M165 180 C165 165, 200 150, 256 150 C312 150, 347 165, 347 180 L347 290 C347 335, 310 360, 256 360 C202 360, 165 335, 165 290 Z" fill="#ca8a04" opacity="0.35"/>
+
+  <!-- Helmet band -->
+  <path d="M120 145 L392 145 L392 185 C392 190, 388 195, 384 195 L128 195 C124 195, 120 190, 120 185 Z" fill="url(#helmet)"/>
+  <path d="M120 155 L392 155 L392 165 L120 165 Z" fill="#a5f3fc" opacity="0.3"/>
+
+  <!-- Helmet crest -->
+  <path d="M236 145 L256 42 L276 145" fill="url(#crest)" stroke="#67e8f9" stroke-width="2"/>
+  <path d="M244 145 L256 62 L268 145" fill="#a5f3fc" opacity="0.4"/>
+
+  <!-- Helmet nose guard -->
+  <path d="M248 195 L256 235 L264 195" fill="url(#helmet)" opacity="0.7"/>
+
+  <!-- Eyes -->
+  <ellipse cx="196" cy="240" rx="28" ry="30" fill="#1e293b"/>
+  <ellipse cx="316" cy="240" rx="28" ry="30" fill="#1e293b"/>
+  <!-- Eye highlights -->
+  <ellipse cx="196" cy="237" rx="22" ry="23" fill="#0f172a"/>
+  <ellipse cx="316" cy="237" rx="22" ry="23" fill="#0f172a"/>
+  <!-- Pupils -->
+  <circle cx="202" cy="235" r="10" fill="#22d3ee"/>
+  <circle cx="322" cy="235" r="10" fill="#22d3ee"/>
+  <!-- Eye shine -->
+  <circle cx="208" cy="228" r="5" fill="white" opacity="0.8"/>
+  <circle cx="328" cy="228" r="5" fill="white" opacity="0.8"/>
+
+  <!-- Nose -->
+  <ellipse cx="256" cy="290" rx="22" ry="15" fill="#92400e"/>
+  <ellipse cx="256" cy="288" rx="16" ry="10" fill="#78350f" opacity="0.6"/>
+  <!-- Nose shine -->
+  <ellipse cx="250" cy="285" rx="6" ry="4" fill="#a16207" opacity="0.5"/>
+
+  <!-- Mouth line -->
+  <path d="M230 305 Q243 318 256 310 Q269 318 282 305" fill="none" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Teeth -->
+  <rect x="237" y="310" width="16" height="32" rx="4" fill="#fef3c7"/>
+  <rect x="259" y="310" width="16" height="32" rx="4" fill="#fef3c7"/>
+  <!-- Tooth highlights -->
+  <rect x="240" y="313" width="5" height="26" rx="2" fill="white" opacity="0.4"/>
+  <rect x="262" y="313" width="5" height="26" rx="2" fill="white" opacity="0.4"/>
+  <!-- Tooth line -->
+  <line x1="253" y1="312" x2="253" y2="340" stroke="#d97706" stroke-width="1" opacity="0.3"/>
+  <line x1="275" y1="312" x2="275" y2="340" stroke="#d97706" stroke-width="1" opacity="0.3"/>
+
+  <!-- Cheek whisker marks -->
+  <circle cx="160" cy="275" r="18" fill="#d97706" opacity="0.2"/>
+  <circle cx="352" cy="275" r="18" fill="#d97706" opacity="0.2"/>
+
+  <!-- Shield below chin -->
+  <path d="M196 380 L256 440 L316 380 L316 365 L196 365 Z" fill="url(#shield)"/>
+  <path d="M216 380 L256 420 L296 380 L296 372 L216 372 Z" fill="#a5f3fc" opacity="0.2"/>
+  <!-- Shield emblem - small star -->
+  <path d="M256 378 L260 388 L270 388 L262 394 L265 404 L256 398 L247 404 L250 394 L242 388 L252 388 Z" fill="#a5f3fc" opacity="0.5"/>
+
+  <!-- Subtle outer glow -->
+  <circle cx="256" cy="256" r="248" fill="none" stroke="#22d3ee" stroke-width="1.5" opacity="0.15"/>
+</svg>

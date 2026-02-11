@@ -1,0 +1,62 @@
+[package]
+name = "sentinel-app"
+version.workspace = true
+edition.workspace = true
+description = "Nexus Sentinel — Main Binary"
+
+[[bin]]
+name = "nexus-sentinel"
+path = "src/main.rs"
+
+[dependencies]
+sentinel-core = { workspace = true }
+sentinel-network = { workspace = true }
+sentinel-endpoint = { workspace = true }
+sentinel-dns = { workspace = true }
+sentinel-email = { workspace = true }
+sentinel-siem = { workspace = true }
+sentinel-identity = { workspace = true }
+sentinel-iot = { workspace = true }
+sentinel-data = { workspace = true }
+sentinel-threat-intel = { workspace = true }
+sentinel-forensics = { workspace = true }
+sentinel-vuln = { workspace = true }
+sentinel-web = { workspace = true }
+sentinel-container = { workspace = true }
+sentinel-supply-chain = { workspace = true }
+sentinel-compliance = { workspace = true }
+sentinel-privacy = { workspace = true }
+sentinel-ai = { workspace = true }
+sentinel-deception = { workspace = true }
+sentinel-browser = { workspace = true }
+sentinel-api = { workspace = true }
+sentinel-vpn = { workspace = true }
+sentinel-hardware = { workspace = true }
+sentinel-exfiltration = { workspace = true }
+sentinel-mgmt = { workspace = true }
+sentinel-selfprotect = { workspace = true }
+sentinel-phishing = { workspace = true }
+sentinel-crypto = { workspace = true }
+sentinel-resilience = { workspace = true }
+sentinel-mobile = { workspace = true }
+sentinel-darkweb = { workspace = true }
+sentinel-ot = { workspace = true }
+sentinel-microseg = { workspace = true }
+sentinel-backup = { workspace = true }
+sentinel-cloud = { workspace = true }
+sentinel-time = { workspace = true }
+sentinel-soceng = { workspace = true }
+sentinel-regulatory = { workspace = true }
+sentinel-ops = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+parking_lot = { workspace = true }
+axum = { workspace = true }
+reqwest = { workspace = true }

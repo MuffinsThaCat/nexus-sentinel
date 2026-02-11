@@ -1,0 +1,10 @@
+target/
+node_modules/
+.DS_Store
+*.swp
+*.swo
+dist/
+build/
+.svelte-kit/
+.env
+.env.local
