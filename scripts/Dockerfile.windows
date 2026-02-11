@@ -1,0 +1,42 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System deps
+RUN apt-get update && apt-get install -y \
+    curl build-essential pkg-config \
+    libssl-dev \
+    mingw-w64 \
+    file zip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Install Rust + Windows target
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup target add x86_64-pc-windows-gnu
+
+# Configure cargo for mingw cross-compile
+RUN mkdir -p /root/.cargo && echo '\n\
+[target.x86_64-pc-windows-gnu]\n\
+linker = "x86_64-w64-mingw32-gcc"\n\
+' >> /root/.cargo/config.toml
+
+WORKDIR /app
+COPY . .
+
+# Build frontend
+WORKDIR /app/sentinel-desktop/frontend
+RUN npm ci
+
+# Build only the Rust binary for Windows (no Tauri bundler — it needs Windows)
+WORKDIR /app
+RUN cargo build --release --target x86_64-pc-windows-gnu \
+    --manifest-path sentinel-desktop/frontend/src-tauri/Cargo.toml \
+    -p beaver-warrior-desktop 2>&1 || true
+
+RUN mkdir -p /output && \
+    cp sentinel-desktop/frontend/src-tauri/target/x86_64-pc-windows-gnu/release/*.exe /output/ 2>/dev/null || true

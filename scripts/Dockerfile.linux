@@ -1,0 +1,37 @@
+FROM --platform=linux/amd64 ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System deps for Tauri on Linux
+RUN apt-get update && apt-get install -y \
+    curl build-essential pkg-config \
+    libwebkit2gtk-4.1-dev \
+    libappindicator3-dev \
+    librsvg2-dev \
+    patchelf \
+    libssl-dev \
+    libgtk-3-dev \
+    libayatana-appindicator3-dev \
+    file \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /app
+COPY . .
+
+# Install frontend deps and build
+WORKDIR /app/sentinel-desktop/frontend
+RUN npm ci
+RUN npx @tauri-apps/cli build 2>&1 || true
+
+# Copy artifacts to output
+RUN mkdir -p /output && \
+    cp -r src-tauri/target/release/bundle/deb/*.deb /output/ 2>/dev/null || true && \
+    cp -r src-tauri/target/release/bundle/appimage/*.AppImage /output/ 2>/dev/null || true
