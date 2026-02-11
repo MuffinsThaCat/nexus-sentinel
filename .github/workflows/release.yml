@@ -46,6 +46,17 @@ jobs:
             libgtk-3-dev \
             libayatana-appindicator3-dev
 
+      # Windows: install Npcap SDK for pnet crate
+      - name: Install Npcap SDK
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://npcap.com/dist/npcap-sdk-1.13.zip" -OutFile "$env:TEMP\npcap-sdk.zip"
+          Expand-Archive -Path "$env:TEMP\npcap-sdk.zip" -DestinationPath "$env:TEMP\npcap-sdk"
+          Copy-Item "$env:TEMP\npcap-sdk\Lib\x64\Packet.lib" -Destination "C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib\"
+          Copy-Item "$env:TEMP\npcap-sdk\Lib\x64\wpcap.lib" -Destination "C:\Users\runneradmin\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib\"
+          echo "LIB=$env:TEMP\npcap-sdk\Lib\x64;$env:LIB" >> $env:GITHUB_ENV
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
