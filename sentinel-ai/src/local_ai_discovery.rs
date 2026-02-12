@@ -346,6 +346,10 @@ impl LocalAiDiscovery {
                     }
                 }
                 // Also check partial matches (process name contains the pattern)
+                // Skip overly generic patterns that cause false positives with OS processes
+                if proc_name == "server" || proc_name == "main" {
+                    continue;
+                }
                 for (name_lower, procs) in &proc_map {
                     if name_lower.contains(proc_name) && name_lower != proc_name {
                         for (pid, exe, mem, cpu, _cmd) in procs {
@@ -370,6 +374,10 @@ impl LocalAiDiscovery {
             // 2. Port probing for tools with known default ports
             for &port in sig.default_ports {
                 if Self::probe_port(port) {
+                    // Verify the port isn't owned by a known macOS system process
+                    if Self::is_system_port_owner(&sys, port) {
+                        continue;
+                    }
                     // Check if we already found this tool via process scan
                     let already_found = found.iter().any(|f| f.name == sig.name);
                     if already_found {
@@ -428,6 +436,35 @@ impl LocalAiDiscovery {
         }
 
         found
+    }
+
+    /// Check if a port is owned by a known macOS/system process (not an AI tool)
+    fn is_system_port_owner(sys: &System, port: u16) -> bool {
+        const SYSTEM_PROCESSES: &[&str] = &[
+            "controlce",        // macOS Control Center (AirPlay on port 5000)
+            "rapportd",         // macOS Rapport daemon
+            "sharingd",         // macOS Sharing daemon
+            "httpd",            // Apache (macOS built-in)
+            "launchd",          // macOS init
+            "systemuiserver",   // macOS UI
+            "windowserver",     // macOS display
+        ];
+        // Check all processes — if the port listener is a known system process, skip it
+        for (_pid, proc_info) in sys.processes() {
+            let name_lower = proc_info.name().to_lowercase();
+            if SYSTEM_PROCESSES.iter().any(|&sp| name_lower.contains(sp)) {
+                // Check if this system process has the port open via its listening connections
+                let cmd_joined = proc_info.cmd().join(" ").to_lowercase();
+                if cmd_joined.contains(&port.to_string()) {
+                    return true;
+                }
+            }
+        }
+        // Fallback: port 5000 on macOS is almost always Control Center
+        if port == 5000 && cfg!(target_os = "macos") {
+            return true;
+        }
+        false
     }
 
     /// Check if a process is actually llama.cpp (for generic names like "server")
