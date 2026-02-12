@@ -1909,8 +1909,10 @@ name = "sentinel-ai"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "bytes",
  "chrono",
+ "clap",
  "dashmap",
  "parking_lot",
  "sentinel-core",
@@ -1919,7 +1921,10 @@ dependencies = [
  "sysinfo",
  "thiserror",
  "tokio",
+ "tower-http",
  "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

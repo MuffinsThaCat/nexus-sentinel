@@ -332,3 +332,163 @@ export async function oauthLogin(provider: OAuthProvider): Promise<AuthResult> {
     return { success: false, message: String(e), state: { logged_in: false, user: null, session_token: null } };
   }
 }
+
+// ── Plan Review Engine ──────────────────────────────────────────────────────
+
+export type PlanAction =
+  | 'FileRead' | 'FileWrite' | 'FileDelete'
+  | 'ProcessSpawn' | 'ProcessKill'
+  | 'NetworkRequest' | 'NetworkListen'
+  | 'EnvRead' | 'EnvWrite'
+  | 'CredentialAccess' | 'CredentialStore'
+  | 'DatabaseQuery' | 'DatabaseMutate'
+  | 'CodeExecution' | 'ShellCommand'
+  | 'RegistryRead' | 'RegistryWrite'
+  | 'MemoryInject' | 'KernelCall'
+  | 'UserImpersonation' | 'PrivilegeEscalation'
+  | 'Custom';
+
+export type RiskLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+export type ApprovalStatus = 'AutoApproved' | 'PendingHumanApproval' | 'Denied';
+
+export interface PlanStep {
+  step_number: number;
+  action: PlanAction;
+  target: string;
+  description: string;
+  requires_credential: string | null;
+  network_endpoint: string | null;
+  network_port: number | null;
+  estimated_duration_ms: number;
+}
+
+export interface AgentPlan {
+  plan_id: string;
+  agent_name: string;
+  stated_goal: string;
+  steps: PlanStep[];
+  submitted_at: number;
+}
+
+export interface StepReview {
+  step_number: number;
+  risk_level: RiskLevel;
+  risk_reasons: string[];
+  recommendation: string;
+  alternatives: string[];
+  approval: ApprovalStatus;
+  blast_radius: number | null;
+  goal_aligned: boolean;
+}
+
+export interface PlanReview {
+  plan_id: string;
+  agent_name: string;
+  overall_risk: RiskLevel;
+  step_reviews: StepReview[];
+  chain_warnings: string[];
+  trajectory_summary: string;
+  auto_approved_count: number;
+  needs_approval_count: number;
+  denied_count: number;
+  reviewed_at: number;
+}
+
+export interface PlanReviewResult {
+  review: PlanReview;
+  is_duplicate: boolean;
+  cached_verdict: RiskLevel | null;
+}
+
+export interface PlanReviewStats {
+  total_reviews: number;
+  total_critical: number;
+  total_denied: number;
+  enabled: boolean;
+  risk_checkpoints: number;
+  statistics: Record<string, unknown>;
+}
+
+export interface PlanAlert {
+  timestamp: number;
+  severity: string;
+  component: string;
+  title: string;
+  details: string;
+}
+
+export interface RiskMatrixEntry {
+  agent: string;
+  action: string;
+  count: number;
+}
+
+export interface ApprovalPattern {
+  agent: string;
+  pattern: string;
+  approved_count: number;
+}
+
+export async function reviewPlan(plan: AgentPlan): Promise<PlanReviewResult> {
+  try {
+    return await invoke<PlanReviewResult>('review_plan', { plan });
+  } catch {
+    return { review: {} as PlanReview, is_duplicate: false, cached_verdict: null };
+  }
+}
+
+export async function approvePlan(agent: string, action: PlanAction, target: string, approved: boolean): Promise<Record<string, unknown>> {
+  try {
+    return await invoke<Record<string, unknown>>('approve_plan', { agent, action, target, approved });
+  } catch {
+    return { recorded: false };
+  }
+}
+
+export async function getPlanReviewStats(): Promise<PlanReviewStats> {
+  try {
+    return await invoke<PlanReviewStats>('get_plan_review_stats');
+  } catch {
+    return { total_reviews: 0, total_critical: 0, total_denied: 0, enabled: false, risk_checkpoints: 0, statistics: {} };
+  }
+}
+
+export async function getPlanReviewAlerts(): Promise<PlanAlert[]> {
+  try {
+    return await invoke<PlanAlert[]>('get_plan_review_alerts');
+  } catch {
+    return [];
+  }
+}
+
+export async function getPlanReviewHistory(limit?: number): Promise<PlanReview[]> {
+  try {
+    return await invoke<PlanReview[]>('get_plan_review_history', { limit: limit ?? 25 });
+  } catch {
+    return [];
+  }
+}
+
+export async function getPlanRiskMatrix(): Promise<RiskMatrixEntry[]> {
+  try {
+    return await invoke<RiskMatrixEntry[]>('get_plan_risk_matrix');
+  } catch {
+    return [];
+  }
+}
+
+export async function getPlanApprovalPatterns(): Promise<ApprovalPattern[]> {
+  try {
+    return await invoke<ApprovalPattern[]>('get_plan_approval_patterns');
+  } catch {
+    return [];
+  }
+}
+
+export async function setPlanReviewEnabled(enabled: boolean): Promise<boolean> {
+  try {
+    return await invoke<boolean>('set_plan_review_enabled', { enabled });
+  } catch {
+    return false;
+  }
+}

@@ -53,3 +53,5 @@ pub mod fine_tuning_attack_detector;
 pub mod reward_hacking_detector;
 pub mod model_drift_sentinel;
 pub mod local_ai_discovery;
+pub mod plan_review_engine;
+pub mod plan_review_server;

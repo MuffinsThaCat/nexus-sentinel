@@ -86,8 +86,12 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Beaver Warrior ${{ github.ref_name }}'
           releaseBody: |
-            v0.3.1 — Local AI Discovery: auto-detect AI tools running on your machine.
-            Detects Ollama, LM Studio, GPT4All, Cursor, Windsurf, ChatGPT, Claude & more.
+            v0.4.0 — AI Agent Plan Review Engine: pre-flight security for AI agent actions.
+
+            NEW: Every AI agent action is risk-scored before execution. Chain attack detection,
+            MITRE ATT&CK mapping, goal alignment, blast radius analysis, approval memory.
+            Standalone HTTP server also available with persistence, auth & Prometheus metrics.
+
             52 AI Agent Security modules, 38 security domains, 286 modules total.
 
             **Download for your platform below.**

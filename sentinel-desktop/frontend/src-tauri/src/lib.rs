@@ -11,12 +11,14 @@ use tauri::Manager;
 pub fn run() {
     let backend = Arc::new(sentinel::SentinelBackend::new());
     let user_store = Arc::new(auth::UserStore::new());
+    let plan_engine = Arc::new(sentinel_ai::plan_review_engine::PlanReviewEngine::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
         .plugin(tauri_plugin_shell::init())
         .manage(backend)
         .manage(user_store)
+        .manage(plan_engine)
         .invoke_handler(tauri::generate_handler![
             sentinel::get_status,
             sentinel::get_alerts,
@@ -36,6 +38,14 @@ pub fn run() {
             oauth::oauth_login,
             updater::check_for_update,
             sentinel::scan_local_ai,
+            sentinel::review_plan,
+            sentinel::approve_plan,
+            sentinel::get_plan_review_stats,
+            sentinel::get_plan_review_alerts,
+            sentinel::get_plan_review_history,
+            sentinel::get_plan_risk_matrix,
+            sentinel::get_plan_approval_patterns,
+            sentinel::set_plan_review_enabled,
         ])
         .setup(|app| {
             // System tray with menu

@@ -907,3 +907,98 @@ pub fn scan_local_ai() -> serde_json::Value {
         "summary": summary,
     })
 }
+
+// ── Plan Review Engine ──────────────────────────────────────────────────────
+
+use sentinel_ai::plan_review_engine::{
+    PlanReviewEngine, AgentPlan, PlanReview, RiskLevel, PlanAction,
+};
+
+#[tauri::command]
+pub fn review_plan(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+    plan: AgentPlan,
+) -> serde_json::Value {
+    let cached = engine.cached_verdict(&plan.agent_name, &plan.stated_goal);
+    let review = engine.review_plan(&plan);
+    let is_dup = engine.is_duplicate_plan(&plan.plan_id);
+    serde_json::json!({
+        "review": review,
+        "is_duplicate": is_dup,
+        "cached_verdict": cached,
+    })
+}
+
+#[tauri::command]
+pub fn approve_plan(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+    agent: String,
+    action: PlanAction,
+    target: String,
+    approved: bool,
+) -> serde_json::Value {
+    engine.record_approval(&agent, action, &target, approved);
+    serde_json::json!({
+        "recorded": true,
+        "agent": agent,
+        "action": format!("{:?}", action),
+        "approved": approved,
+    })
+}
+
+#[tauri::command]
+pub fn get_plan_review_stats(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "total_reviews": engine.review_count(),
+        "total_critical": engine.critical_count(),
+        "total_denied": engine.denied_count(),
+        "enabled": engine.is_enabled(),
+        "risk_checkpoints": engine.risk_checkpoint_count(),
+        "statistics": engine.review_statistics(),
+    })
+}
+
+#[tauri::command]
+pub fn get_plan_review_alerts(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+) -> Vec<sentinel_ai::types::AiAlert> {
+    engine.alerts()
+}
+
+#[tauri::command]
+pub fn get_plan_review_history(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+    limit: Option<usize>,
+) -> Vec<PlanReview> {
+    engine.recent_reviews(limit.unwrap_or(25).min(500))
+}
+
+#[tauri::command]
+pub fn get_plan_risk_matrix(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+) -> Vec<serde_json::Value> {
+    engine.risk_matrix_entries().into_iter().map(|(agent, action, count)| {
+        serde_json::json!({ "agent": agent, "action": action, "count": count })
+    }).collect()
+}
+
+#[tauri::command]
+pub fn get_plan_approval_patterns(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+) -> Vec<serde_json::Value> {
+    engine.approval_patterns().into_iter().map(|(agent, pattern, count)| {
+        serde_json::json!({ "agent": agent, "pattern": pattern, "approved_count": count })
+    }).collect()
+}
+
+#[tauri::command]
+pub fn set_plan_review_enabled(
+    engine: tauri::State<'_, Arc<PlanReviewEngine>>,
+    enabled: bool,
+) -> bool {
+    engine.set_enabled(enabled);
+    log::info!("Plan Review Engine enabled: {}", enabled);
+    enabled
+}
