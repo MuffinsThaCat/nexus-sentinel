@@ -1002,3 +1002,74 @@ pub fn set_plan_review_enabled(
     log::info!("Plan Review Engine enabled: {}", enabled);
     enabled
 }
+
+// ── Response Integrity Analyzer Commands ─────────────────────────────────
+
+use sentinel_ai::response_integrity_analyzer::{
+    ResponseIntegrityAnalyzer, LlmResponse, ResponseAnalysis, IntegrityStats,
+    IntegrityLevel,
+};
+
+#[tauri::command]
+pub fn analyze_response(
+    analyzer: tauri::State<'_, Arc<ResponseIntegrityAnalyzer>>,
+    response: LlmResponse,
+) -> ResponseAnalysis {
+    analyzer.analyze_response(&response)
+}
+
+#[tauri::command]
+pub fn get_ria_stats(
+    analyzer: tauri::State<'_, Arc<ResponseIntegrityAnalyzer>>,
+) -> serde_json::Value {
+    let stats = analyzer.integrity_statistics();
+    serde_json::json!({
+        "total_analyzed": analyzer.analyzed_count(),
+        "total_hostile": analyzer.hostile_count(),
+        "total_compromised": analyzer.compromised_count(),
+        "total_findings": stats.total_findings,
+        "total_clean": stats.total_clean,
+        "total_suspicious": stats.total_suspicious,
+        "stego_detections": stats.stego_detections,
+        "data_leak_detections": stats.data_leak_detections,
+        "poisoned_artifact_detections": stats.poisoned_artifact_detections,
+        "malicious_code_detections": stats.malicious_code_detections,
+        "hidden_instruction_detections": stats.hidden_instruction_detections,
+        "unique_models": stats.unique_models.len(),
+        "enabled": analyzer.is_enabled(),
+    })
+}
+
+#[tauri::command]
+pub fn get_ria_alerts(
+    analyzer: tauri::State<'_, Arc<ResponseIntegrityAnalyzer>>,
+) -> Vec<sentinel_ai::types::AiAlert> {
+    analyzer.alerts()
+}
+
+#[tauri::command]
+pub fn get_ria_history(
+    analyzer: tauri::State<'_, Arc<ResponseIntegrityAnalyzer>>,
+    limit: Option<usize>,
+) -> Vec<ResponseAnalysis> {
+    analyzer.recent_analyses(limit.unwrap_or(25).min(500))
+}
+
+#[tauri::command]
+pub fn get_ria_finding_matrix(
+    analyzer: tauri::State<'_, Arc<ResponseIntegrityAnalyzer>>,
+) -> Vec<serde_json::Value> {
+    analyzer.finding_matrix_entries().into_iter().map(|(model, category, count)| {
+        serde_json::json!({ "model": model, "category": category, "count": count })
+    }).collect()
+}
+
+#[tauri::command]
+pub fn set_ria_enabled(
+    analyzer: tauri::State<'_, Arc<ResponseIntegrityAnalyzer>>,
+    enabled: bool,
+) -> bool {
+    analyzer.set_enabled(enabled);
+    log::info!("Response Integrity Analyzer enabled: {}", enabled);
+    enabled
+}

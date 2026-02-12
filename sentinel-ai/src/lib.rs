@@ -55,3 +55,4 @@ pub mod model_drift_sentinel;
 pub mod local_ai_discovery;
 pub mod plan_review_engine;
 pub mod plan_review_server;
+pub mod response_integrity_analyzer;

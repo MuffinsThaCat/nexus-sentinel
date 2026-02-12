@@ -12,6 +12,7 @@ pub fn run() {
     let backend = Arc::new(sentinel::SentinelBackend::new());
     let user_store = Arc::new(auth::UserStore::new());
     let plan_engine = Arc::new(sentinel_ai::plan_review_engine::PlanReviewEngine::new());
+    let ria = Arc::new(sentinel_ai::response_integrity_analyzer::ResponseIntegrityAnalyzer::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
@@ -19,6 +20,7 @@ pub fn run() {
         .manage(backend)
         .manage(user_store)
         .manage(plan_engine)
+        .manage(ria)
         .invoke_handler(tauri::generate_handler![
             sentinel::get_status,
             sentinel::get_alerts,
@@ -46,6 +48,12 @@ pub fn run() {
             sentinel::get_plan_risk_matrix,
             sentinel::get_plan_approval_patterns,
             sentinel::set_plan_review_enabled,
+            sentinel::analyze_response,
+            sentinel::get_ria_stats,
+            sentinel::get_ria_alerts,
+            sentinel::get_ria_history,
+            sentinel::get_ria_finding_matrix,
+            sentinel::set_ria_enabled,
         ])
         .setup(|app| {
             // System tray with menu

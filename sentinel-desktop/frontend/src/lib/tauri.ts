@@ -492,3 +492,130 @@ export async function setPlanReviewEnabled(enabled: boolean): Promise<boolean> {
     return false;
   }
 }
+
+// ── Response Integrity Analyzer ──────────────────────────────────────────
+
+export interface LlmResponse {
+  response_id: string;
+  model_name: string;
+  content: string;
+  turn_number: number;
+  timestamp: number;
+  conversation_id: string;
+  role: string;
+}
+
+export type IntegrityLevel = 'Clean' | 'Suspicious' | 'Compromised' | 'Hostile';
+
+export interface IntegrityFinding {
+  category: string;
+  severity: string;
+  title: string;
+  details: string;
+  evidence: string;
+  byte_offset: number | null;
+  mitre_ids: string[];
+  recommended_action: string;
+}
+
+export interface EntropyProfile {
+  char_entropy: number;
+  word_entropy: number;
+  line_length_variance: number;
+  whitespace_ratio: number;
+  punctuation_ratio: number;
+  uppercase_ratio: number;
+  digit_ratio: number;
+  non_ascii_ratio: number;
+  zero_width_count: number;
+  unicode_homoglyph_count: number;
+  invisible_char_count: number;
+  entropy_anomaly_score: number;
+}
+
+export interface ResponseAnalysis {
+  response_id: string;
+  model_name: string;
+  overall_integrity: IntegrityLevel;
+  findings: IntegrityFinding[];
+  entropy_profile: EntropyProfile;
+  total_findings: number;
+  critical_findings: number;
+  data_leak_count: number;
+  stego_score: number;
+  poisoned_artifact_count: number;
+  summary: string;
+  analyzed_at: number;
+}
+
+export interface RiaStats {
+  total_analyzed: number;
+  total_hostile: number;
+  total_compromised: number;
+  total_findings: number;
+  total_clean: number;
+  total_suspicious: number;
+  stego_detections: number;
+  data_leak_detections: number;
+  poisoned_artifact_detections: number;
+  malicious_code_detections: number;
+  hidden_instruction_detections: number;
+  unique_models: number;
+  enabled: boolean;
+}
+
+export interface RiaFindingMatrixEntry {
+  model: string;
+  category: string;
+  count: number;
+}
+
+export async function analyzeResponse(response: LlmResponse): Promise<ResponseAnalysis> {
+  return await invoke<ResponseAnalysis>('analyze_response', { response });
+}
+
+export async function getRiaStats(): Promise<RiaStats> {
+  try {
+    return await invoke<RiaStats>('get_ria_stats');
+  } catch {
+    return {
+      total_analyzed: 0, total_hostile: 0, total_compromised: 0,
+      total_findings: 0, total_clean: 0, total_suspicious: 0,
+      stego_detections: 0, data_leak_detections: 0,
+      poisoned_artifact_detections: 0, malicious_code_detections: 0,
+      hidden_instruction_detections: 0, unique_models: 0, enabled: false,
+    };
+  }
+}
+
+export async function getRiaAlerts(): Promise<UnifiedAlert[]> {
+  try {
+    return await invoke<UnifiedAlert[]>('get_ria_alerts');
+  } catch {
+    return [];
+  }
+}
+
+export async function getRiaHistory(limit?: number): Promise<ResponseAnalysis[]> {
+  try {
+    return await invoke<ResponseAnalysis[]>('get_ria_history', { limit: limit ?? 25 });
+  } catch {
+    return [];
+  }
+}
+
+export async function getRiaFindingMatrix(): Promise<RiaFindingMatrixEntry[]> {
+  try {
+    return await invoke<RiaFindingMatrixEntry[]>('get_ria_finding_matrix');
+  } catch {
+    return [];
+  }
+}
+
+export async function setRiaEnabled(enabled: boolean): Promise<boolean> {
+  try {
+    return await invoke<boolean>('set_ria_enabled', { enabled });
+  } catch {
+    return false;
+  }
+}
