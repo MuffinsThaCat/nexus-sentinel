@@ -52,3 +52,4 @@ pub mod synthetic_content_detector;
 pub mod fine_tuning_attack_detector;
 pub mod reward_hacking_detector;
 pub mod model_drift_sentinel;
+pub mod local_ai_discovery;

@@ -531,7 +531,9 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "ai", "Fine-Tuning Attack Detect", FineTuningAttackDetector::new());
       reg!(s, "ai", "Reward Hacking Detect", RewardHackingDetector::new());
       reg!(s, "ai", "Model Drift Sentinel", ModelDriftSentinel::new());
-      dom!(d, "ai", "AI Agent Security", 52); }
+      use sentinel_ai::local_ai_discovery::LocalAiDiscovery;
+      reg!(s, "ai", "Local AI Discovery", LocalAiDiscovery::new());
+      dom!(d, "ai", "AI Agent Security", 53); }
 
     // ── 18. Deception (6 modules) ──
     { use sentinel_deception::dns_canary::DnsCanary;
@@ -892,4 +894,16 @@ pub fn set_tier(backend: tauri::State<'_, Arc<SentinelBackend>>, tier: Tier) -> 
     *backend.current_tier.write() = tier;
     log::info!("Tier changed to {:?}", tier);
     get_tier_info(backend)
+}
+
+#[tauri::command]
+pub fn scan_local_ai() -> serde_json::Value {
+    use sentinel_ai::local_ai_discovery::LocalAiDiscovery;
+    let scanner = LocalAiDiscovery::new();
+    let tools = scanner.scan();
+    let summary = scanner.summary();
+    serde_json::json!({
+        "tools": tools,
+        "summary": summary,
+    })
 }

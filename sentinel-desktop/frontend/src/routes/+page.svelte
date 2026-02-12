@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getStatus, getAlerts, getMetrics, getTierInfo, setTier, getAuthState, authLogout, activateLicense, getPaymentUrl, updateProfile, checkForUpdate, refreshTier, getPortalUrl, domainIcons, formatUptime, formatBytes, timeAgo, tierColors, tierGradients } from '$lib/tauri';
+	import { getStatus, getAlerts, getMetrics, getTierInfo, setTier, getAuthState, authLogout, activateLicense, getPaymentUrl, updateProfile, checkForUpdate, refreshTier, getPortalUrl, domainIcons, formatUptime, formatBytes, timeAgo, tierColors, tierGradients, scanLocalAi } from '$lib/tauri';
 	import { open } from '@tauri-apps/plugin-shell';
-	import type { StatusResponse, AlertResponse, MetricsResponse, DomainStatus, UnifiedAlert, TierInfo, Tier, AuthState, UserProfile, LicenseResult, UpdateCheck } from '$lib/tauri';
+	import type { StatusResponse, AlertResponse, MetricsResponse, DomainStatus, UnifiedAlert, TierInfo, Tier, AuthState, UserProfile, LicenseResult, UpdateCheck, AiScanResult, DiscoveredAiTool } from '$lib/tauri';
 
 	let status: StatusResponse = $state({ domains: [], enabled_domains: 0, total_modules: 0, uptime_secs: 0, current_tier: 'Enterprise' });
 	let alerts: AlertResponse = $state({ alerts: [], total: 0, critical: 0, high: 0 });
@@ -20,6 +20,8 @@
 	let licenseMsgOk = $state(false);
 	let updateInfo: UpdateCheck = $state({ current_version: '0.0.0', latest_version: '0.0.0', update_available: false, download_url: '', release_notes: '' });
 	let updateDismissed = $state(false);
+	let aiScan: AiScanResult = $state({ tools: [], summary: { total_tools: 0, local_llms: 0, coding_assistants: 0, desktop_apps: 0, dev_frameworks: 0, image_audio: 0, high_risk: 0, medium_risk: 0, low_risk: 0, total_ai_memory_bytes: 0 } });
+	let aiScanning = $state(false);
 
 	onMount(() => {
 		async function refresh() {
@@ -44,6 +46,8 @@
 			}
 		})();
 		checkForUpdate().then(u => updateInfo = u);
+		// Auto-scan for local AI tools on startup
+		(async () => { aiScanning = true; aiScan = await scanLocalAi(); aiScanning = false; })();
 		const timer = setInterval(refresh, 5000);
 		const updateTimer = setInterval(() => checkForUpdate().then(u => updateInfo = u), 600000);
 		const clock = setInterval(() => now = Date.now(), 1000);
@@ -378,6 +382,113 @@
 							</div>
 							<span class="text-[11px] text-white/30">RSS — {formatBytes(metrics.process_vms)} virtual</span>
 						</div>
+					</div>
+
+					<!-- Local AI Discovery -->
+					<div class="glass-bright p-5">
+						<div class="flex items-center justify-between mb-4">
+							<div class="flex items-center gap-2.5">
+								<span class="text-base">🤖</span>
+								<h2 class="text-[13px] font-semibold text-white/70 uppercase tracking-wider">Local AI Discovery</h2>
+								{#if aiScan.summary.total_tools > 0}
+									<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/20">{aiScan.summary.total_tools} found</span>
+								{/if}
+							</div>
+							<button
+								onclick={async () => { aiScanning = true; aiScan = await scanLocalAi(); aiScanning = false; }}
+								disabled={aiScanning}
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-white/50 border border-white/[0.06] hover:bg-white/[0.08] hover:text-white/70 transition-all disabled:opacity-40"
+							>
+								{#if aiScanning}
+									<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+									Scanning...
+								{:else}
+									<svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><polyline points="21 3 21 9 15 9"/></svg>
+									Re-scan
+								{/if}
+							</button>
+						</div>
+
+						{#if aiScan.tools.length === 0 && !aiScanning}
+							<div class="flex items-center gap-3 p-4 rounded-lg bg-white/[0.02] border border-white/[0.03]">
+								<div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+									<svg viewBox="0 0 24 24" class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+								</div>
+								<div>
+									<span class="text-[12px] text-white/60 font-medium">No local AI tools detected</span>
+									<p class="text-[11px] text-white/30 mt-0.5">Scanned processes and known ports — click Re-scan to check again</p>
+								</div>
+							</div>
+						{:else if aiScanning && aiScan.tools.length === 0}
+							<div class="flex items-center justify-center p-6 text-white/30">
+								<svg class="w-5 h-5 animate-spin mr-2" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+								<span class="text-[12px]">Scanning for local AI tools...</span>
+							</div>
+						{:else}
+							<!-- Summary pills -->
+							<div class="flex flex-wrap gap-2 mb-3">
+								{#if aiScan.summary.local_llms > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+										{aiScan.summary.local_llms} Local LLM{aiScan.summary.local_llms > 1 ? 's' : ''}
+									</span>
+								{/if}
+								{#if aiScan.summary.coding_assistants > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">
+										{aiScan.summary.coding_assistants} Coding Assistant{aiScan.summary.coding_assistants > 1 ? 's' : ''}
+									</span>
+								{/if}
+								{#if aiScan.summary.desktop_apps > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/15">
+										{aiScan.summary.desktop_apps} Desktop App{aiScan.summary.desktop_apps > 1 ? 's' : ''}
+									</span>
+								{/if}
+								{#if aiScan.summary.dev_frameworks > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/15">
+										{aiScan.summary.dev_frameworks} Dev Framework{aiScan.summary.dev_frameworks > 1 ? 's' : ''}
+									</span>
+								{/if}
+								{#if aiScan.summary.image_audio > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-pink-500/10 text-pink-400 border border-pink-500/15">
+										{aiScan.summary.image_audio} Image/Audio
+									</span>
+								{/if}
+								{#if aiScan.summary.high_risk > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/15">
+										{aiScan.summary.high_risk} High Risk
+									</span>
+								{/if}
+								{#if aiScan.summary.total_ai_memory_bytes > 0}
+									<span class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-white/[0.04] text-white/40 border border-white/[0.06]">
+										{formatBytes(aiScan.summary.total_ai_memory_bytes)} AI memory
+									</span>
+								{/if}
+							</div>
+
+							<!-- Tool cards -->
+							<div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+								{#each aiScan.tools as tool, i}
+									{@const riskColor = tool.risk_level === 'High' ? 'red' : tool.risk_level === 'Medium' ? 'amber' : 'emerald'}
+									{@const catIcon = tool.category === 'LocalLlm' ? '🧠' : tool.category === 'CodingAssistant' ? '💻' : tool.category === 'DesktopApp' ? '🖥️' : tool.category === 'DevFramework' ? '⚙️' : tool.category === 'ImageAudio' ? '🎨' : '🌐'}
+									<div class="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all animate-in" style="animation-delay:{i * 40}ms">
+										<div class="flex items-center gap-2 mb-1.5">
+											<span class="text-sm">{catIcon}</span>
+											<span class="text-[12px] font-semibold text-white/80 truncate flex-1">{tool.name}</span>
+											<span class="px-1.5 py-px rounded text-[8px] font-bold uppercase border
+												{riskColor === 'red' ? 'bg-red-500/10 text-red-400 border-red-500/20' : riskColor === 'amber' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}">
+												{tool.risk_level}
+											</span>
+										</div>
+										<p class="text-[10px] text-white/40 leading-relaxed line-clamp-1 mb-1.5">{tool.details}</p>
+										<div class="flex items-center gap-3 text-[9px] text-white/25 font-mono">
+											<span>via {tool.detection_method}</span>
+											{#if tool.port}<span>:{tool.port}</span>{/if}
+											{#if tool.pid}<span>PID {tool.pid}</span>{/if}
+											{#if tool.memory_bytes > 0}<span>{formatBytes(tool.memory_bytes)}</span>{/if}
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
 
 					<!-- Domain Grid + Recent Alerts row -->

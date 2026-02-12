@@ -279,6 +279,48 @@ export async function checkForUpdate(): Promise<UpdateCheck> {
   }
 }
 
+// ── Local AI Discovery ──────────────────────────────────────────────────────
+
+export interface DiscoveredAiTool {
+  name: string;
+  category: string;
+  detection_method: string;
+  pid: number | null;
+  port: number | null;
+  exe_path: string;
+  memory_bytes: number;
+  cpu_percent: number;
+  risk_level: string;
+  details: string;
+  discovered_at: number;
+}
+
+export interface AiDiscoverySummary {
+  total_tools: number;
+  local_llms: number;
+  coding_assistants: number;
+  desktop_apps: number;
+  dev_frameworks: number;
+  image_audio: number;
+  high_risk: number;
+  medium_risk: number;
+  low_risk: number;
+  total_ai_memory_bytes: number;
+}
+
+export interface AiScanResult {
+  tools: DiscoveredAiTool[];
+  summary: AiDiscoverySummary;
+}
+
+export async function scanLocalAi(): Promise<AiScanResult> {
+  try {
+    return await invoke<AiScanResult>('scan_local_ai');
+  } catch {
+    return { tools: [], summary: { total_tools: 0, local_llms: 0, coding_assistants: 0, desktop_apps: 0, dev_frameworks: 0, image_audio: 0, high_risk: 0, medium_risk: 0, low_risk: 0, total_ai_memory_bytes: 0 } };
+  }
+}
+
 export type OAuthProvider = 'Google' | 'GitHub';
 
 export async function oauthLogin(provider: OAuthProvider): Promise<AuthResult> {

@@ -35,6 +35,7 @@ pub fn run() {
             auth::get_portal_url,
             oauth::oauth_login,
             updater::check_for_update,
+            sentinel::scan_local_ai,
         ])
         .setup(|app| {
             // System tray with menu

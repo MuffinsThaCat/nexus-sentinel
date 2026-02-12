@@ -1916,6 +1916,7 @@ dependencies = [
  "sentinel-core",
  "serde",
  "serde_json",
+ "sysinfo",
  "thiserror",
  "tokio",
  "tracing",
