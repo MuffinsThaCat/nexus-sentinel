@@ -106,3 +106,99 @@ jobs:
             sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
             sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
             sentinel-desktop/frontend/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+
+  # ── Deploy all platform builds to beaverwarrior.com ──────────────
+  deploy-website:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts (debug)
+        run: find artifacts -type f | head -80
+
+      - name: Collect binaries into website public/
+        run: |
+          PUBLIC="beaver-warrior-website/public"
+
+          # ── macOS ARM (zip the .app) ──
+          APP_ARM=$(find artifacts/BeaverWarrior-macOS-arm64 -name "*.app" -type d | head -1)
+          if [ -n "$APP_ARM" ]; then
+            (cd "$(dirname "$APP_ARM")" && zip -r "$GITHUB_WORKSPACE/$PUBLIC/BeaverWarrior-macOS.zip" "$(basename "$APP_ARM")")
+            echo "✅ macOS ARM zip created"
+          else
+            echo "⚠️  No macOS ARM .app found"
+          fi
+
+          # ── macOS x64 (zip the .app) ──
+          APP_X64=$(find artifacts/BeaverWarrior-macOS-x64 -name "*.app" -type d | head -1)
+          if [ -n "$APP_X64" ]; then
+            (cd "$(dirname "$APP_X64")" && zip -r "$GITHUB_WORKSPACE/$PUBLIC/BeaverWarrior-macOS-x64.zip" "$(basename "$APP_X64")")
+            echo "✅ macOS x64 zip created"
+          else
+            echo "⚠️  No macOS x64 .app found"
+          fi
+
+          # ── Windows MSI ──
+          MSI=$(find artifacts/BeaverWarrior-Windows-x64 -name "*.msi" | head -1)
+          if [ -n "$MSI" ]; then
+            cp "$MSI" "$PUBLIC/BeaverWarrior-Windows-x64.msi"
+            echo "✅ Windows MSI copied"
+          fi
+
+          # ── Windows EXE (setup) ──
+          EXE=$(find artifacts/BeaverWarrior-Windows-x64 -name "*setup*.exe" -o -name "*.exe" | head -1)
+          if [ -n "$EXE" ]; then
+            cp "$EXE" "$PUBLIC/BeaverWarrior-Windows-x64-setup.exe"
+            echo "✅ Windows EXE copied"
+          fi
+
+          # ── Linux .deb ──
+          DEB=$(find artifacts/BeaverWarrior-Linux-x64 -name "*.deb" | head -1)
+          if [ -n "$DEB" ]; then
+            cp "$DEB" "$PUBLIC/BeaverWarrior-Linux.deb"
+            echo "✅ Linux .deb copied"
+          fi
+
+          # ── Linux AppImage ──
+          APPIMAGE=$(find artifacts/BeaverWarrior-Linux-x64 -name "*.AppImage" | head -1)
+          if [ -n "$APPIMAGE" ]; then
+            cp "$APPIMAGE" "$PUBLIC/BeaverWarrior-Linux.AppImage"
+            echo "✅ Linux AppImage copied"
+          fi
+
+          # ── Update version.json ──
+          VERSION="${GITHUB_REF_NAME#v}"
+          cat > "$PUBLIC/version.json" << EOF
+          {
+            "version": "$VERSION",
+            "download_url": "https://beaverwarrior.com/BeaverWarrior-macOS.zip",
+            "release_notes": "$GITHUB_REF_NAME — Local AI Discovery & multi-platform release."
+          }
+          EOF
+
+          echo "📦 Website public/ contents:"
+          ls -lh "$PUBLIC"/BeaverWarrior-* "$PUBLIC"/version.json 2>/dev/null || true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install website deps
+        working-directory: beaver-warrior-website
+        run: npm ci
+
+      - name: Deploy to Vercel
+        working-directory: beaver-warrior-website
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_qZuBQHG3IO2GXGmydla4GfyL
+          VERCEL_PROJECT_ID: prj_AB8ijRXANqRoKxRCGMU4VLIKkKPB
+        run: npx vercel --prod --yes --token "$VERCEL_TOKEN"
