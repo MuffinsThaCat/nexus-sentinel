@@ -20,6 +20,8 @@ use sentinel_core::tiered_cache::TieredCache;
 use sentinel_core::differential::DifferentialStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -139,6 +141,10 @@ pub struct HumanInTheLoopEnforcer {
     pruned_history: PruningMap<String, ApprovalRequest>,
     /// Breakthrough #1: O(log n) rate limit history
     rate_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #627: Sparse agent×action approval matrix
+    approval_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for action fingerprints
+    action_dedup: DedupStore<String, String>,
     emergency_stop: AtomicBool,
     auto_approve_safe: bool,
     timeout_secs: i64,
@@ -167,6 +173,8 @@ impl HumanInTheLoopEnforcer {
             policy_diffs: DifferentialStore::new(),
             pruned_history: PruningMap::new(10_000),
             rate_state: RwLock::new(HierarchicalState::new(8, 64)),
+            approval_matrix: RwLock::new(SparseMatrix::new(0)),
+            action_dedup: DedupStore::new(),
             emergency_stop: AtomicBool::new(false),
             auto_approve_safe: true, timeout_secs: DEFAULT_TIMEOUT_SECS, enabled: true,
             alerts: RwLock::new(Vec::new()),

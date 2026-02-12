@@ -14,8 +14,13 @@
 //! Memory breakthroughs: #3 Reversible, #592 Dedup, #5 Streaming, #6 Verifier
 
 use crate::types::*;
+use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::reversible::ReversibleComputation;
 use sentinel_core::dedup::DedupStore;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
 use sentinel_core::streaming::StreamAccumulator;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
@@ -157,6 +162,16 @@ pub struct ClipboardExfilDetector {
     total_frequency_anomalies: AtomicU64,
     total_size_anomalies: AtomicU64,
     total_high_entropy: AtomicU64,
+    /// Breakthrough #2: Hot/warm/cold scan result cache
+    scan_cache: TieredCache<String, u64>,
+    /// Breakthrough #461: Clipboard baseline evolution tracking
+    clipboard_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) exfil trend history
+    exfil_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #627: Sparse agent×data-type matrix
+    exfil_matrix: RwLock<SparseMatrix<String, String, u64>>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -201,6 +216,11 @@ impl ClipboardExfilDetector {
             total_frequency_anomalies: AtomicU64::new(0),
             total_size_anomalies: AtomicU64::new(0),
             total_high_entropy: AtomicU64::new(0),
+            scan_cache: TieredCache::new(10_000),
+            clipboard_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            exfil_state: RwLock::new(HierarchicalState::new(8, 64)),
+            exfil_matrix: RwLock::new(SparseMatrix::new(0)),
             metrics: None,
             enabled: true,
         }

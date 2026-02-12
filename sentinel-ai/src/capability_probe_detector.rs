@@ -20,6 +20,7 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::dedup::DedupStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
@@ -133,6 +134,8 @@ pub struct CapabilityProbeDetector {
     trend_state: RwLock<HierarchicalState<f64>>,
     /// Breakthrough #627: Sparse user×category probe matrix
     probe_matrix: RwLock<SparseMatrix<String, String, u32>>,
+    /// Breakthrough #461: Probe pattern baseline evolution
+    probe_diffs: DifferentialStore<String, String>,
 
     sessions: RwLock<HashMap<String, SessionProfile>>,
     user_history: RwLock<HashMap<String, VecDeque<(i64, f64)>>>,
@@ -157,6 +160,7 @@ impl CapabilityProbeDetector {
             pruned_alerts: PruningMap::new(5_000),
             trend_state: RwLock::new(HierarchicalState::new(8, 64)),
             probe_matrix: RwLock::new(SparseMatrix::new(0)),
+            probe_diffs: DifferentialStore::new(),
             sessions: RwLock::new(HashMap::new()),
             user_history: RwLock::new(HashMap::new()),
             alerts: RwLock::new(Vec::new()),

@@ -5,8 +5,14 @@
 //! - **#6 Theoretical Verifier**: Bound memory usage
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
-use sentinel_core::mitre;use parking_lot::RwLock;
+use sentinel_core::mitre;
+use parking_lot::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::warn;
 
@@ -26,6 +32,16 @@ pub struct OutputFilter {
     total_filtered: AtomicU64,
     total_blocked: AtomicU64,
     _cache: TieredCache<String, u64>,
+    /// Breakthrough #461: Filter rule evolution tracking
+    rule_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) filter trend history
+    filter_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #627: Sparse category×source matrix
+    category_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for output fingerprints
+    output_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -67,6 +83,69 @@ const PII_LEAKAGE_INDICATORS: &[(&str, &str)] = &[
     ("4xxx xxxx", "cc_leak"),  // credit card fragments
 ];
 
+/// Structured output injection patterns — attacks that exploit downstream parsers.
+const JSON_INJECTION: &[&str] = &[
+    "\"__proto__\"", "\"constructor\"", "\"prototype\"",
+    "$where", "$gt", "$ne", "$regex",  // NoSQL injection via JSON
+    "\"$set\"", "\"$unset\"",
+];
+
+const MARKDOWN_INJECTION: &[&str] = &[
+    "![](http",          // image beacon (exfiltration via rendered markdown)
+    "](javascript:",     // markdown link with JS
+    "[click](data:",     // data URI in markdown link
+    "<iframe",           // HTML injection in markdown
+    "<object",
+    "<embed",
+    "<form action",
+    "<svg onload",
+    "<img src=x onerror",
+    "<details open ontoggle",
+];
+
+const CSV_FORMULA_INJECTION: &[&str] = &[
+    "=cmd|",     // DDE command execution
+    "=HYPERLINK(",
+    "=IMPORTXML(",
+    "=IMPORTDATA(",
+    "=IMPORTFEED(",
+    "+cmd|",
+    "-cmd|",
+    "@SUM(",      // formula starting with @
+    "|cmd|",
+    "=WEBSERVICE(",
+];
+
+const LATEX_INJECTION: &[&str] = &[
+    "\\input{",
+    "\\include{",
+    "\\write18{",
+    "\\immediate\\write",
+    "\\openin",
+    "\\openout",
+    "\\catcode",
+    "\\def\\",
+];
+
+const YAML_DESERIALIZATION: &[&str] = &[
+    "!!python/object",
+    "!!python/module",
+    "!!ruby/object",
+    "!!java/object",
+    "!!map",
+    "tag:yaml.org",
+];
+
+const TEMPLATE_INJECTION: &[&str] = &[
+    "{{", "{%",              // Jinja2/Twig
+    "${7*7}",               // Expression language
+    "#{7*7}",               // Ruby ERB / Java EL
+    "<%= ",                 // ERB
+    "{{constructor",        // Angular
+    "{{config",
+    "{{self",
+];
+
 impl OutputFilter {
     pub fn new() -> Self {
         Self {
@@ -76,6 +155,11 @@ impl OutputFilter {
             total_blocked: AtomicU64::new(0),
             enabled: true,
             _cache: TieredCache::new(10_000),
+            rule_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            filter_state: RwLock::new(HierarchicalState::new(8, 64)),
+            category_matrix: RwLock::new(SparseMatrix::new(0)),
+            output_dedup: DedupStore::new(),
             metrics: None,
         }
     }
@@ -120,6 +204,50 @@ impl OutputFilter {
         for pat in CODE_INJECTION_IN_OUTPUT {
             if lower.contains(pat) {
                 findings.push(format!("code_injection:{}", &pat[..pat.len().min(20)]));
+                if (max_sev as u8) < (Severity::High as u8) { max_sev = Severity::High; }
+            }
+        }
+
+        // Check structured output injection attacks
+        for pat in JSON_INJECTION {
+            if lower.contains(&pat.to_lowercase()) {
+                findings.push(format!("json_injection:{}", &pat[..pat.len().min(20)]));
+                if (max_sev as u8) < (Severity::High as u8) { max_sev = Severity::High; }
+            }
+        }
+
+        for pat in MARKDOWN_INJECTION {
+            if lower.contains(&pat.to_lowercase()) {
+                findings.push(format!("markdown_injection:{}", &pat[..pat.len().min(25)]));
+                if (max_sev as u8) < (Severity::High as u8) { max_sev = Severity::High; }
+            }
+        }
+
+        // CSV formula injection — check if output starts with or contains formula triggers
+        for pat in CSV_FORMULA_INJECTION {
+            if output.contains(pat) {
+                findings.push(format!("csv_formula_injection:{}", &pat[..pat.len().min(15)]));
+                if (max_sev as u8) < (Severity::High as u8) { max_sev = Severity::High; }
+            }
+        }
+
+        for pat in LATEX_INJECTION {
+            if output.contains(pat) {
+                findings.push(format!("latex_injection:{}", &pat[..pat.len().min(15)]));
+                if (max_sev as u8) < (Severity::High as u8) { max_sev = Severity::High; }
+            }
+        }
+
+        for pat in YAML_DESERIALIZATION {
+            if lower.contains(pat) {
+                findings.push(format!("yaml_deser_injection:{}", &pat[..pat.len().min(20)]));
+                max_sev = Severity::Critical;
+            }
+        }
+
+        for pat in TEMPLATE_INJECTION {
+            if output.contains(pat) {
+                findings.push(format!("template_injection:{}", &pat[..pat.len().min(15)]));
                 if (max_sev as u8) < (Severity::High as u8) { max_sev = Severity::High; }
             }
         }

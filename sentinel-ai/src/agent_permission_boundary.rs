@@ -15,7 +15,11 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::vq_codec::VqCodec;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
@@ -202,6 +206,14 @@ pub struct AgentPermissionBoundary {
     total_escalated: AtomicU64,
     lockdown: AtomicBool,
     default_permission: Permission,
+    /// Breakthrough #461: Permission rule evolution tracking
+    rule_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) permission trend history
+    perm_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #592: Content-addressed dedup for permission fingerprints
+    perm_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -224,6 +236,10 @@ impl AgentPermissionBoundary {
             total_escalated: AtomicU64::new(0),
             lockdown: AtomicBool::new(false),
             default_permission: Permission::Deny,
+            rule_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            perm_state: RwLock::new(HierarchicalState::new(8, 64)),
+            perm_dedup: DedupStore::new(),
             metrics: None,
             enabled: true,
         }

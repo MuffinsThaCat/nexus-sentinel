@@ -5,8 +5,14 @@
 //! - **#6 Theoretical Verifier**: Bound memory usage
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
-use sentinel_core::mitre;use parking_lot::RwLock;
+use sentinel_core::mitre;
+use parking_lot::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tracing::warn;
 
@@ -28,6 +34,16 @@ pub struct ModelScanner {
     total_scanned: AtomicU64,
     total_threats: AtomicU64,
     _cache: TieredCache<String, u64>,
+    /// Breakthrough #461: Model baseline evolution tracking
+    model_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) scan trend history
+    scan_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #627: Sparse model×threat matrix
+    threat_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for model fingerprints
+    model_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -71,6 +87,11 @@ impl ModelScanner {
             total_threats: AtomicU64::new(0),
             enabled: true,
             _cache: TieredCache::new(10_000),
+            model_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            scan_state: RwLock::new(HierarchicalState::new(8, 64)),
+            threat_matrix: RwLock::new(SparseMatrix::new(0)),
+            model_dedup: DedupStore::new(),
             metrics: None,
         }
     }

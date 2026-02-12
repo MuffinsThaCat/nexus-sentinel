@@ -222,8 +222,9 @@ pub fn bootstrap(config: &SentinelConfig, metrics: MemoryMetrics) -> SecuritySta
         dom!(s, "privacy", "Privacy", true, 4);
     } else { dom!(s, "privacy", "Privacy", false, 0); }
 
-    // 17. AI Agent Security (20 modules — most comprehensive AI security layer in existence)
+    // 17. AI Agent Security (52 modules — most comprehensive AI security layer in existence)
     if config.ai.enabled {
+        // ── Imports: Core AI monitoring ─────────────────────────────────────
         use sentinel_ai::shadow_ai_detector::ShadowAiDetector;
         use sentinel_ai::api_key_monitor::ApiKeyMonitor;
         use sentinel_ai::prompt_guard::PromptGuard;
@@ -231,19 +232,59 @@ pub fn bootstrap(config: &SentinelConfig, metrics: MemoryMetrics) -> SecuritySta
         use sentinel_ai::model_scanner::ModelScanner;
         use sentinel_ai::data_poisoning_detector::DataPoisoningDetector;
         use sentinel_ai::local_sandbox::LocalSandbox;
+        // ── Imports: Agent runtime security ─────────────────────────────────
         use sentinel_ai::tool_call_validator::ToolCallValidator;
+        use sentinel_ai::tool_integrity_verifier::ToolIntegrityVerifier;
         use sentinel_ai::agent_action_logger::AgentActionLogger;
         use sentinel_ai::agent_permission_boundary::AgentPermissionBoundary;
         use sentinel_ai::agent_network_fence::AgentNetworkFence;
         use sentinel_ai::agent_behavior_baseline::AgentBehaviorBaseline;
         use sentinel_ai::agent_session_recorder::AgentSessionRecorder;
         use sentinel_ai::agent_cost_monitor::AgentCostMonitor;
+        use sentinel_ai::agent_identity_attestation::AgentIdentityAttestation;
         use sentinel_ai::clipboard_exfil_detector::ClipboardExfilDetector;
         use sentinel_ai::multi_agent_conflict::MultiAgentConflictDetector;
+        use sentinel_ai::delegation_chain_auditor::DelegationChainAuditor;
+        use sentinel_ai::cross_plugin_data_fence::CrossPluginDataFence;
+        use sentinel_ai::autonomous_agent_containment::AutonomousAgentContainment;
+        // ── Imports: Pre-inference defense ──────────────────────────────────
+        use sentinel_ai::semantic_firewall::SemanticFirewall;
+        use sentinel_ai::indirect_injection_scanner::IndirectInjectionScanner;
+        use sentinel_ai::multi_turn_tracker::MultiTurnTracker;
+        use sentinel_ai::token_smuggling_detector::TokenSmugglingDetector;
+        use sentinel_ai::context_window_stuffing_guard::ContextWindowStuffingGuard;
+        use sentinel_ai::instruction_hierarchy_enforcer::InstructionHierarchyEnforcer;
+        use sentinel_ai::capability_probe_detector::CapabilityProbeDetector;
+        // ── Imports: Post-inference & output ────────────────────────────────
+        use sentinel_ai::output_watermarker::OutputWatermarker;
+        use sentinel_ai::hallucination_detector::HallucinationDetector;
+        use sentinel_ai::conversation_state_integrity::ConversationStateIntegrity;
+        // ── Imports: Continuous monitoring ──────────────────────────────────
         use sentinel_ai::rag_poisoning_detector::RagPoisoningDetector;
         use sentinel_ai::mcp_protocol_security::McpProtocolSecurity;
         use sentinel_ai::reasoning_trace_auditor::ReasoningTraceAuditor;
-        // Core AI monitoring
+        use sentinel_ai::memory_poisoning_guard::MemoryPoisoningGuard;
+        use sentinel_ai::sleeper_agent_detector::SleeperAgentDetector;
+        use sentinel_ai::goal_drift_monitor::GoalDriftMonitor;
+        use sentinel_ai::agentic_loop_detector::AgenticLoopDetector;
+        use sentinel_ai::human_in_the_loop_enforcer::HumanInTheLoopEnforcer;
+        use sentinel_ai::model_extraction_guard::ModelExtractionGuard;
+        use sentinel_ai::adversarial_input_detector::AdversarialInputDetector;
+        use sentinel_ai::ai_supply_chain_attestation::AiSupplyChainAttestation;
+        use sentinel_ai::security_pipeline::SecurityPipeline;
+        // ── Imports: NEW Tier 1 — Critical AI defense ──────────────────────
+        use sentinel_ai::system_prompt_guardian::SystemPromptGuardian;
+        use sentinel_ai::multimodal_injection_scanner::MultimodalInjectionScanner;
+        use sentinel_ai::jailbreak_classifier::JailbreakClassifier;
+        use sentinel_ai::training_data_extraction_guard::TrainingDataExtractionGuard;
+        use sentinel_ai::embedding_space_monitor::EmbeddingSpaceMonitor;
+        // ── Imports: NEW Tier 2 — Important AI defense ─────────────────────
+        use sentinel_ai::synthetic_content_detector::SyntheticContentDetector;
+        use sentinel_ai::fine_tuning_attack_detector::FineTuningAttackDetector;
+        use sentinel_ai::reward_hacking_detector::RewardHackingDetector;
+        use sentinel_ai::model_drift_sentinel::ModelDriftSentinel;
+
+        // ── Registration: Core AI monitoring ───────────────────────────────
         reg!(c, "ai", "Shadow AI Detector", ShadowAiDetector::new().with_metrics(m.clone()));
         reg!(c, "ai", "API Key Monitor", ApiKeyMonitor::new().with_metrics(m.clone()));
         reg!(c, "ai", "Prompt Guard", PromptGuard::new());
@@ -251,21 +292,58 @@ pub fn bootstrap(config: &SentinelConfig, metrics: MemoryMetrics) -> SecuritySta
         reg!(c, "ai", "Model Scanner", ModelScanner::new());
         reg!(c, "ai", "Data Poisoning Detector", DataPoisoningDetector::new(0.7));
         reg!(c, "ai", "Local Sandbox", LocalSandbox::new());
-        // Agent runtime security
+        // ── Registration: Pre-inference defense ────────────────────────────
+        reg!(c, "ai", "Semantic Firewall", SemanticFirewall::new());
+        reg!(c, "ai", "Indirect Injection Scanner", IndirectInjectionScanner::new());
+        reg!(c, "ai", "Multi-Turn Tracker", MultiTurnTracker::new());
+        reg!(c, "ai", "Token Smuggling Detector", TokenSmugglingDetector::new());
+        reg!(c, "ai", "Context Window Stuffing Guard", ContextWindowStuffingGuard::new());
+        reg!(c, "ai", "Instruction Hierarchy Enforcer", InstructionHierarchyEnforcer::new());
+        reg!(c, "ai", "Capability Probe Detector", CapabilityProbeDetector::new());
+        // ── Registration: Agent runtime security ───────────────────────────
         reg!(c, "ai", "Tool Call Validator", ToolCallValidator::new());
+        reg!(c, "ai", "Tool Integrity Verifier", ToolIntegrityVerifier::new());
         reg!(c, "ai", "Agent Action Logger", AgentActionLogger::new());
         reg!(c, "ai", "Agent Permission Boundary", AgentPermissionBoundary::new());
         reg!(c, "ai", "Agent Network Fence", AgentNetworkFence::new());
         reg!(c, "ai", "Agent Behavior Baseline", AgentBehaviorBaseline::new());
         reg!(c, "ai", "Agent Session Recorder", AgentSessionRecorder::new());
         reg!(c, "ai", "Agent Cost Monitor", AgentCostMonitor::new());
+        reg!(c, "ai", "Agent Identity Attestation", AgentIdentityAttestation::new());
         reg!(c, "ai", "Clipboard Exfil Detector", ClipboardExfilDetector::new());
         reg!(c, "ai", "Multi-Agent Conflict", MultiAgentConflictDetector::new());
-        // World-first AI security modules
+        reg!(c, "ai", "Delegation Chain Auditor", DelegationChainAuditor::new());
+        reg!(c, "ai", "Cross-Plugin Data Fence", CrossPluginDataFence::new());
+        reg!(c, "ai", "Autonomous Agent Containment", AutonomousAgentContainment::new());
+        // ── Registration: Post-inference & output ──────────────────────────
+        reg!(c, "ai", "Output Watermarker", OutputWatermarker::new());
+        reg!(c, "ai", "Hallucination Detector", HallucinationDetector::new());
+        reg!(c, "ai", "Conversation State Integrity", ConversationStateIntegrity::new());
+        // ── Registration: Continuous monitoring ────────────────────────────
         reg!(c, "ai", "RAG Poisoning Detector", RagPoisoningDetector::new());
         reg!(c, "ai", "MCP Protocol Security", McpProtocolSecurity::new());
         reg!(c, "ai", "Reasoning Trace Auditor", ReasoningTraceAuditor::new());
-        dom!(s, "ai", "AI Agent Security", true, 19);
+        reg!(c, "ai", "Memory Poisoning Guard", MemoryPoisoningGuard::new());
+        reg!(c, "ai", "Sleeper Agent Detector", SleeperAgentDetector::new());
+        reg!(c, "ai", "Goal Drift Monitor", GoalDriftMonitor::new());
+        reg!(c, "ai", "Agentic Loop Detector", AgenticLoopDetector::new());
+        reg!(c, "ai", "Human-in-the-Loop Enforcer", HumanInTheLoopEnforcer::new());
+        reg!(c, "ai", "Model Extraction Guard", ModelExtractionGuard::new());
+        reg!(c, "ai", "Adversarial Input Detector", AdversarialInputDetector::new());
+        reg!(c, "ai", "AI Supply Chain Attestation", AiSupplyChainAttestation::new());
+        reg!(c, "ai", "Security Pipeline", SecurityPipeline::new());
+        // ── Registration: NEW Tier 1 — Critical AI defense ─────────────────
+        reg!(c, "ai", "System Prompt Guardian", SystemPromptGuardian::new());
+        reg!(c, "ai", "Multimodal Injection Scanner", MultimodalInjectionScanner::new());
+        reg!(c, "ai", "Jailbreak Classifier", JailbreakClassifier::new());
+        reg!(c, "ai", "Training Data Extraction Guard", TrainingDataExtractionGuard::new());
+        reg!(c, "ai", "Embedding Space Monitor", EmbeddingSpaceMonitor::new());
+        // ── Registration: NEW Tier 2 — Important AI defense ────────────────
+        reg!(c, "ai", "Synthetic Content Detector", SyntheticContentDetector::new());
+        reg!(c, "ai", "Fine-Tuning Attack Detector", FineTuningAttackDetector::new());
+        reg!(c, "ai", "Reward Hacking Detector", RewardHackingDetector::new());
+        reg!(c, "ai", "Model Drift Sentinel", ModelDriftSentinel::new());
+        dom!(s, "ai", "AI Agent Security", true, 52);
     } else { dom!(s, "ai", "AI Agent Security", false, 0); }
 
     // 18. Deception (no with_metrics on core modules)

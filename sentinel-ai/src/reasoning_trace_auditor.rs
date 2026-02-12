@@ -18,8 +18,11 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
-
 use sentinel_core::differential::DifferentialStore;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -153,6 +156,14 @@ pub struct ReasoningTraceAuditor {
     trace_cache: TieredCache<String, u64>,
     thought_stream: AtomicU64,
     goal_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) trace trend history
+    trace_state: RwLock<HierarchicalState<f64>>,
+    /// Breakthrough #627: Sparse agent×category trace matrix
+    trace_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for trace fingerprints
+    trace_dedup: DedupStore<String, String>,
 
     // Session tracking
     sessions: RwLock<HashMap<String, SessionState>>,
@@ -177,6 +188,10 @@ impl ReasoningTraceAuditor {
             trace_cache: TieredCache::new(50_000),
             thought_stream: AtomicU64::new(0),
             goal_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            trace_state: RwLock::new(HierarchicalState::new(8, 64)),
+            trace_matrix: RwLock::new(SparseMatrix::new(0)),
+            trace_dedup: DedupStore::new(),
             sessions: RwLock::new(HashMap::new()),
             total_traces: AtomicU64::new(0), total_blocked: AtomicU64::new(0),
             total_divergences: AtomicU64::new(0), total_deceptions: AtomicU64::new(0),

@@ -3,8 +3,8 @@
 //! 13 breakthrough memory techniques ported from the Nexus LLM training system.
 //! Every security component in Nexus Sentinel links against this library.
 //!
-//! ## Techniques (ordered by applicability across 250 components):
-//! - **#6  Theoretical Verifier** — Runtime memory bounds checking (all 250 components)
+//! ## Techniques (ordered by applicability across 286 components):
+//! - **#6  Theoretical Verifier** — Runtime memory bounds checking (all 286 components)
 //! - **#461 Differential Storage** — Store only changes from baseline (~135 components)
 //! - **#5  Streaming Accumulation** — Process in chunks, discard raw (~115 components)
 //! - **#2  Tiered Cache** — Hot/warm/cold with compression (~90 components)

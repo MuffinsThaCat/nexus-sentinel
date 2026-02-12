@@ -10,9 +10,10 @@
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
 use sentinel_core::differential::DifferentialStore;
-
-
-
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -129,7 +130,15 @@ pub struct RagPoisoningDetector {
     chunk_cache: TieredCache<String, u64>,
     kb_diffs: DifferentialStore<String, String>,
     stats_acc: AtomicU64,
-    
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) poisoning trend history
+    poison_state: RwLock<HierarchicalState<f64>>,
+    /// Breakthrough #627: Sparse source×technique matrix
+    poison_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for chunk fingerprints
+    chunk_dedup: DedupStore<String, String>,
+
     source_reps: RwLock<HashMap<String, SourceReputation>>,
     recent_queries: RwLock<VecDeque<(String, i64)>>,
     trusted_hashes: RwLock<HashSet<String>>,
@@ -154,7 +163,10 @@ impl RagPoisoningDetector {
             chunk_cache: TieredCache::new(100_000),
             kb_diffs: DifferentialStore::new(),
             stats_acc: AtomicU64::new(0),
-            
+            pruned_alerts: PruningMap::new(5_000),
+            poison_state: RwLock::new(HierarchicalState::new(8, 64)),
+            poison_matrix: RwLock::new(SparseMatrix::new(0)),
+            chunk_dedup: DedupStore::new(),
             source_reps: RwLock::new(HashMap::new()),
             recent_queries: RwLock::new(VecDeque::with_capacity(10_000)),
             trusted_hashes: RwLock::new(HashSet::new()),

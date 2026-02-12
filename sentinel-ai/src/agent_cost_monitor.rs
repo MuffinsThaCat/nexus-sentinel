@@ -6,9 +6,13 @@
 //! Memory breakthroughs: #5 Streaming, #1 Hierarchical, #569 Pruning, #6 Verifier
 
 use crate::types::*;
+use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::streaming::StreamAccumulator;
 use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::pruning::PruningMap;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -108,6 +112,14 @@ pub struct AgentCostMonitor {
     total_events: AtomicU64,
     total_cost_micros: AtomicU64,
     total_budget_alerts: AtomicU64,
+    /// Breakthrough #2: Hot/warm/cold cost lookup cache
+    cost_cache: TieredCache<String, u64>,
+    /// Breakthrough #461: Cost baseline evolution tracking
+    cost_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #627: Sparse model×agent cost matrix
+    cost_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for event fingerprints
+    event_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -151,7 +163,12 @@ impl AgentCostMonitor {
             goal_costs: RwLock::new(HashMap::new()), daily_costs: RwLock::new(Vec::new()),
             event_seq: AtomicU64::new(0), alerts: RwLock::new(Vec::new()),
             total_events: AtomicU64::new(0), total_cost_micros: AtomicU64::new(0),
-            total_budget_alerts: AtomicU64::new(0), metrics: None, enabled: true,
+            total_budget_alerts: AtomicU64::new(0),
+            cost_cache: TieredCache::new(20_000),
+            cost_diffs: DifferentialStore::new(),
+            cost_matrix: RwLock::new(SparseMatrix::new(0)),
+            event_dedup: DedupStore::new(),
+            metrics: None, enabled: true,
         }
     }
 

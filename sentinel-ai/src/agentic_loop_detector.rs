@@ -16,9 +16,11 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::dedup::DedupStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
 use sentinel_core::reversible::ReversibleComputation;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
@@ -82,7 +84,11 @@ pub struct AgenticLoopDetector {
     /// Breakthrough #569: φ-weighted alert pruning
     pruned_alerts: PruningMap<String, AiAlert>,
     /// Breakthrough #1: O(log n) loop history
-    loop_state: RwLock<HierarchicalState<u64>>,
+    loop_state: RwLock<HierarchicalState<f64>>,
+    /// Breakthrough #461: Session baseline evolution tracking
+    session_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #627: Sparse agent×action loop frequency matrix
+    loop_matrix: RwLock<SparseMatrix<String, String, u32>>,
 
     sessions: RwLock<HashMap<String, SessionTracker>>,
     alerts: RwLock<Vec<AiAlert>>,
@@ -105,6 +111,8 @@ impl AgenticLoopDetector {
             sequence_dedup: RwLock::new(DedupStore::with_capacity(5_000)),
             pruned_alerts: PruningMap::new(5_000),
             loop_state: RwLock::new(HierarchicalState::new(8, 64)),
+            session_diffs: DifferentialStore::new(),
+            loop_matrix: RwLock::new(SparseMatrix::new(0)),
             sessions: RwLock::new(HashMap::new()),
             alerts: RwLock::new(Vec::new()),
             total_steps: AtomicU64::new(0), total_loops: AtomicU64::new(0),

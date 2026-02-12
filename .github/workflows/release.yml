@@ -86,8 +86,8 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Beaver Warrior ${{ github.ref_name }}'
           releaseBody: |
-            v0.2.0 — 31 AI Agent Security modules with memory breakthroughs.
-            38 security domains, 256 modules total.
+            v0.3.0 — 52 AI Agent Security modules (7 world-first) with 6 memory breakthroughs each.
+            38 security domains, 286 modules total.
 
             **Download for your platform below.**
           releaseDraft: false

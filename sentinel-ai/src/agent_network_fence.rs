@@ -18,8 +18,12 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::streaming::StreamAccumulator;
 use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -144,6 +148,14 @@ pub struct AgentNetworkFence {
     exfil_detections: AtomicU64,
     geo_blocks: AtomicU64,
     lockdown: AtomicBool,
+    /// Breakthrough #461: Domain reputation evolution tracking
+    domain_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #1: O(log n) connection trend history
+    connection_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #627: Sparse agent×endpoint matrix
+    endpoint_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for connection fingerprints
+    connection_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -208,6 +220,10 @@ impl AgentNetworkFence {
             exfil_detections: AtomicU64::new(0),
             geo_blocks: AtomicU64::new(0),
             lockdown: AtomicBool::new(false),
+            domain_diffs: DifferentialStore::new(),
+            connection_state: RwLock::new(HierarchicalState::new(8, 64)),
+            endpoint_matrix: RwLock::new(SparseMatrix::new(0)),
+            connection_dedup: DedupStore::new(),
             metrics: None,
             enabled: true,
         }

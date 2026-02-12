@@ -15,7 +15,12 @@
 //! Memory breakthroughs: #461 Differential, #4 VQ Codec, #573 Paged, #593 Compression, #6 Verifier
 
 use crate::types::*;
+use sentinel_core::tiered_cache::TieredCache;
 use sentinel_core::differential::DifferentialStore;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::vq_codec::VqCodec;
 use sentinel_core::paged::PagedMemory;
 use sentinel_core::MemoryMetrics;
@@ -173,6 +178,16 @@ pub struct AgentSessionRecorder {
     total_completed: AtomicU64,
     total_failed: AtomicU64,
     alerts: RwLock<Vec<AiAlert>>,
+    /// Breakthrough #2: Hot/warm/cold session lookup cache
+    session_cache: TieredCache<String, u64>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) session trend history
+    session_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #627: Sparse agent×action session matrix
+    session_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for event fingerprints
+    event_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -198,6 +213,11 @@ impl AgentSessionRecorder {
             total_completed: AtomicU64::new(0),
             total_failed: AtomicU64::new(0),
             alerts: RwLock::new(Vec::new()),
+            session_cache: TieredCache::new(10_000),
+            pruned_alerts: PruningMap::new(5_000),
+            session_state: RwLock::new(HierarchicalState::new(8, 64)),
+            session_matrix: RwLock::new(SparseMatrix::new(0)),
+            event_dedup: DedupStore::new(),
             metrics: None,
             enabled: true,
         }

@@ -13,9 +13,14 @@
 //! Memory breakthroughs: #5 Streaming, #4 VQ Codec, #461 Differential, #1 Hierarchical, #6 Verifier
 
 use crate::types::*;
+use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::streaming::StreamAccumulator;
 use sentinel_core::vq_codec::VqCodec;
+use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -127,6 +132,16 @@ pub struct AgentBehaviorBaseline {
     total_events: AtomicU64,
     total_anomalies: AtomicU64,
     total_drift_alerts: AtomicU64,
+    /// Breakthrough #2: Hot/warm/cold profile lookup cache
+    profile_cache: TieredCache<String, u64>,
+    /// Breakthrough #461: Behavior baseline evolution tracking
+    behavior_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #627: Sparse agent×behavior-type matrix
+    behavior_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for behavior fingerprints
+    behavior_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -168,6 +183,11 @@ impl AgentBehaviorBaseline {
             total_events: AtomicU64::new(0),
             total_anomalies: AtomicU64::new(0),
             total_drift_alerts: AtomicU64::new(0),
+            profile_cache: TieredCache::new(10_000),
+            behavior_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            behavior_matrix: RwLock::new(SparseMatrix::new(0)),
+            behavior_dedup: DedupStore::new(),
             metrics: None,
             enabled: true,
         }

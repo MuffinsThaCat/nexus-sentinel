@@ -7,7 +7,11 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::reversible::ReversibleComputation;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
@@ -138,6 +142,14 @@ pub struct ToolCallValidator {
     total_sanitized: AtomicU64,
     total_injections: AtomicU64,
     total_rate_limited: AtomicU64,
+    /// Breakthrough #461: Schema baseline evolution tracking
+    schema_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #569: φ-weighted alert pruning
+    pruned_alerts: PruningMap<String, AiAlert>,
+    /// Breakthrough #1: O(log n) validation trend history
+    validation_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #592: Content-addressed dedup for call fingerprints
+    call_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -161,6 +173,10 @@ impl ToolCallValidator {
             total_sanitized: AtomicU64::new(0),
             total_injections: AtomicU64::new(0),
             total_rate_limited: AtomicU64::new(0),
+            schema_diffs: DifferentialStore::new(),
+            pruned_alerts: PruningMap::new(5_000),
+            validation_state: RwLock::new(HierarchicalState::new(8, 64)),
+            call_dedup: DedupStore::new(),
             metrics: None,
             enabled: true,
         }

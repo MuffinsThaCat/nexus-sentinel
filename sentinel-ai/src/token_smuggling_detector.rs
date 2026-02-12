@@ -19,9 +19,11 @@
 
 use crate::types::*;
 use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::dedup::DedupStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -144,6 +146,10 @@ pub struct TokenSmugglingDetector {
     pruned_alerts: PruningMap<String, AiAlert>,
     /// Breakthrough #1: O(log n) attack trend history
     attack_trend: RwLock<HierarchicalState<f64>>,
+    /// Breakthrough #461: Source baseline evolution tracking
+    source_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #627: Sparse source×technique matrix
+    technique_matrix: RwLock<SparseMatrix<String, String, u32>>,
 
     source_history: RwLock<HashMap<String, VecDeque<(i64, f64)>>>,
     alerts: RwLock<Vec<AiAlert>>,
@@ -168,6 +174,8 @@ impl TokenSmugglingDetector {
             payload_dedup: RwLock::new(DedupStore::with_capacity(5_000)),
             pruned_alerts: PruningMap::new(5_000),
             attack_trend: RwLock::new(HierarchicalState::new(8, 64)),
+            source_diffs: DifferentialStore::new(),
+            technique_matrix: RwLock::new(SparseMatrix::new(0)),
             source_history: RwLock::new(HashMap::new()),
             alerts: RwLock::new(Vec::new()),
             total_scans: AtomicU64::new(0), total_blocked: AtomicU64::new(0),

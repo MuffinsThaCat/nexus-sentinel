@@ -22,6 +22,7 @@ use sentinel_core::differential::DifferentialStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -79,6 +80,8 @@ pub struct DelegationChainAuditor {
     deleg_state: RwLock<HierarchicalState<u64>>,
     /// Breakthrough #627: Sparse agent×agent delegation matrix
     deleg_matrix: RwLock<SparseMatrix<String, String, u32>>,
+    /// Content-addressed dedup for delegation records
+    deleg_dedup: DedupStore<String, String>,
 
     delegations: RwLock<HashMap<String, DelegationRecord>>,
     agent_delegations: RwLock<HashMap<String, Vec<String>>>,
@@ -105,6 +108,7 @@ impl DelegationChainAuditor {
             pruned_audit: PruningMap::new(10_000),
             deleg_state: RwLock::new(HierarchicalState::new(8, 64)),
             deleg_matrix: RwLock::new(SparseMatrix::new(0)),
+            deleg_dedup: DedupStore::new(),
             delegations: RwLock::new(HashMap::new()),
             agent_delegations: RwLock::new(HashMap::new()),
             agent_permissions: RwLock::new(HashMap::new()),

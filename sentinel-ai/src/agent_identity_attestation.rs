@@ -23,6 +23,7 @@ use sentinel_core::differential::DifferentialStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -100,6 +101,8 @@ pub struct AgentIdentityAttestation {
     trust_state: RwLock<HierarchicalState<f64>>,
     /// Breakthrough #627: Sparse agent×agent trust matrix
     trust_matrix: RwLock<SparseMatrix<String, String, f64>>,
+    /// Content-addressed dedup for certificate fingerprints
+    cert_dedup: DedupStore<String, String>,
 
     registry: RwLock<HashMap<String, AgentRecord>>,
     revocation_list: RwLock<HashSet<String>>,
@@ -125,6 +128,7 @@ impl AgentIdentityAttestation {
             pruned_alerts: PruningMap::new(5_000),
             trust_state: RwLock::new(HierarchicalState::new(8, 64)),
             trust_matrix: RwLock::new(SparseMatrix::new(0.0)),
+            cert_dedup: DedupStore::new(),
             registry: RwLock::new(HashMap::new()),
             revocation_list: RwLock::new(HashSet::new()),
             known_issuers: RwLock::new(HashSet::from(["system".to_string(), "root".to_string()])),

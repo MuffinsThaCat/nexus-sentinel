@@ -11,9 +11,13 @@
 //! Memory breakthroughs: #5 Streaming, #1 Hierarchical, #593 Compression, #569 Pruning, #6 Verifier
 
 use crate::types::*;
+use sentinel_core::tiered_cache::TieredCache;
+use sentinel_core::differential::DifferentialStore;
 use sentinel_core::streaming::StreamAccumulator;
 use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::pruning::PruningMap;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -194,6 +198,14 @@ pub struct AgentActionLogger {
     critical_threshold: f64,
     max_actions_per_minute: f64,
     chain_window_secs: i64,
+    /// Breakthrough #2: Hot/warm/cold action lookup cache
+    action_cache: TieredCache<String, u64>,
+    /// Breakthrough #461: Action baseline evolution tracking
+    action_diffs: DifferentialStore<String, String>,
+    /// Breakthrough #627: Sparse agent×action-type matrix
+    action_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for action fingerprints
+    action_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -254,6 +266,10 @@ impl AgentActionLogger {
             rate_tracker: RwLock::new(HashMap::new()),
             session_stats: RwLock::new(HashMap::new()),
             alerts: RwLock::new(Vec::new()),
+            action_cache: TieredCache::new(20_000),
+            action_diffs: DifferentialStore::new(),
+            action_matrix: RwLock::new(SparseMatrix::new(0)),
+            action_dedup: DedupStore::new(),
             action_seq: AtomicU64::new(0),
             total_logged: AtomicU64::new(0),
             high_risk_count: AtomicU64::new(0),

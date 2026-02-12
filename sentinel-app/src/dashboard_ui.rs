@@ -59,17 +59,44 @@ async fn api_ai_security(State(stack): State<Arc<SecurityStack>>) -> Json<serde_
     let ai_alerts = stack.collect_alerts().into_iter()
         .filter(|a| a.domain == "ai").collect::<Vec<_>>();
     let ai_modules: Vec<&str> = vec![
-        "Prompt Guard", "Output Filter", "Model Scanner", "Data Poisoning Detector",
-        "Local Sandbox", "Shadow AI Detector", "API Key Monitor",
-        "Tool Call Validator", "Agent Action Logger", "Agent Permission Boundary",
-        "Agent Network Fence", "Agent Behavior Baseline", "Agent Session Recorder",
-        "Agent Cost Monitor", "Clipboard Exfil Detector", "Multi-Agent Conflict",
+        // Core AI monitoring
+        "Shadow AI Detector", "API Key Monitor", "Prompt Guard", "Model Scanner",
+        "Output Filter", "Local Sandbox", "Data Poisoning Detector",
+        // Pre-inference defense
+        "Semantic Firewall", "Indirect Injection Scanner", "Multi-Turn Tracker",
+        "Token Smuggling Detector", "Context Window Stuffing Guard",
+        "Instruction Hierarchy Enforcer", "Capability Probe Detector",
+        // Agent runtime security
+        "Tool Call Validator", "Tool Integrity Verifier", "Agent Action Logger",
+        "Agent Permission Boundary", "Agent Network Fence", "Agent Behavior Baseline",
+        "Agent Session Recorder", "Agent Cost Monitor", "Agent Identity Attestation",
+        "Clipboard Exfil Detector", "Multi-Agent Conflict Detector",
+        "Delegation Chain Auditor", "Cross-Plugin Data Fence",
+        "Autonomous Agent Containment",
+        // Post-inference & output
+        "Output Watermarker", "Hallucination Detector", "Conversation State Integrity",
+        // Continuous monitoring
         "RAG Poisoning Detector", "MCP Protocol Security", "Reasoning Trace Auditor",
+        "Memory Poisoning Guard", "Sleeper Agent Detector", "Goal Drift Monitor",
+        "Agentic Loop Detector", "Human-in-the-Loop Enforcer",
+        "Model Extraction Guard", "Adversarial Input Detector",
+        "AI Supply Chain Attestation", "Security Pipeline",
+        // Tier 1 — Critical AI defense
+        "System Prompt Guardian", "Multimodal Injection Scanner",
+        "Jailbreak Classifier", "Training Data Extraction Guard",
+        "Embedding Space Monitor",
+        // Tier 2 — Important AI defense
+        "Synthetic Content Detector", "Fine-Tuning Attack Detector",
+        "Reward Hacking Detector", "Model Drift Sentinel",
     ];
     let world_first = vec![
         json!({"name": "RAG Poisoning Detector", "categories": 12, "description": "Detects poisoned documents in retrieval-augmented generation pipelines"}),
         json!({"name": "MCP Protocol Security", "categories": 15, "description": "Validates Model Context Protocol and Agent-to-Agent protocol messages"}),
         json!({"name": "Reasoning Trace Auditor", "categories": 8, "description": "Detects think-act divergence in AI agent chain-of-thought"}),
+        json!({"name": "Jailbreak Classifier", "categories": 11, "description": "Multi-technique jailbreak detection with φ-weighted escalation scoring"}),
+        json!({"name": "System Prompt Guardian", "categories": 9, "description": "Detects system prompt extraction and leakage attempts across sessions"}),
+        json!({"name": "Multimodal Injection Scanner", "categories": 7, "description": "Scans images, audio, and documents for embedded prompt injections"}),
+        json!({"name": "Embedding Space Monitor", "categories": 6, "description": "Detects adversarial perturbations and drift in embedding spaces"}),
     ];
     Json(json!({
         "total_modules": ai_modules.len(),
@@ -158,7 +185,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:#334155;border-top:1p
 <div class="panel-body"><div class="domain-grid" id="domain-grid"></div></div>
 </div>
 <div class="panel" style="grid-column:1/-1">
-<div class="panel-header" style="background:linear-gradient(90deg,rgba(139,92,246,0.15),rgba(6,182,212,0.15))"><span style="color:var(--purple)">AI Agent Security — 19 Modules (3 World-First)</span><span id="ai-alert-count"></span></div>
+<div class="panel-header" style="background:linear-gradient(90deg,rgba(139,92,246,0.15),rgba(6,182,212,0.15))"><span style="color:var(--purple)">AI Agent Security — 52 Modules (7 World-First)</span><span id="ai-alert-count"></span></div>
 <div class="panel-body" id="ai-panel"><div class="no-data">Loading AI security...</div></div>
 </div>
 <div class="panel">

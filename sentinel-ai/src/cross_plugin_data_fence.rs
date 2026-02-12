@@ -22,6 +22,7 @@ use sentinel_core::differential::DifferentialStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -138,6 +139,8 @@ pub struct CrossPluginDataFence {
     flow_state: RwLock<HierarchicalState<u64>>,
     /// Breakthrough #627: Sparse tool×tool data flow counts
     flow_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Content-addressed dedup for data flow fingerprints
+    flow_dedup: DedupStore<String, String>,
 
     tool_contexts: RwLock<HashMap<String, ToolContext>>,
     session_taints: RwLock<HashMap<String, HashMap<String, HashSet<DataClassification>>>>,
@@ -162,6 +165,7 @@ impl CrossPluginDataFence {
             pruned_alerts: PruningMap::new(5_000),
             flow_state: RwLock::new(HierarchicalState::new(8, 64)),
             flow_matrix: RwLock::new(SparseMatrix::new(0)),
+            flow_dedup: DedupStore::new(),
             tool_contexts: RwLock::new(HashMap::new()),
             session_taints: RwLock::new(HashMap::new()),
             flow_log: RwLock::new(VecDeque::with_capacity(10_000)),

@@ -26,6 +26,7 @@ use sentinel_core::differential::DifferentialStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -153,6 +154,8 @@ pub struct InstructionHierarchyEnforcer {
     escalation_state: RwLock<HierarchicalState<f64>>,
     /// Breakthrough #627: Sparse source×trust violation counts
     violation_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Content-addressed dedup for violation payloads
+    violation_dedup: DedupStore<String, String>,
 
     violation_history: RwLock<VecDeque<(String, i64, f64)>>,
     source_violation_counts: RwLock<HashMap<String, u64>>,
@@ -177,6 +180,7 @@ impl InstructionHierarchyEnforcer {
             pruned_alerts: PruningMap::new(5_000),
             escalation_state: RwLock::new(HierarchicalState::new(8, 64)),
             violation_matrix: RwLock::new(SparseMatrix::new(0)),
+            violation_dedup: DedupStore::new(),
             violation_history: RwLock::new(VecDeque::with_capacity(10_000)),
             source_violation_counts: RwLock::new(HashMap::new()),
             alerts: RwLock::new(Vec::new()),

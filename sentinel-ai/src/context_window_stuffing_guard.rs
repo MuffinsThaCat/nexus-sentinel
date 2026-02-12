@@ -22,6 +22,8 @@ use sentinel_core::tiered_cache::TieredCache;
 use sentinel_core::differential::DifferentialStore;
 use sentinel_core::pruning::PruningMap;
 use sentinel_core::hierarchical::HierarchicalState;
+use sentinel_core::sparse::SparseMatrix;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::reversible::ReversibleComputation;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
@@ -100,6 +102,10 @@ pub struct ContextWindowStuffingGuard {
     pruned_alerts: PruningMap<String, AiAlert>,
     /// Breakthrough #1: O(log n) utilization history
     util_state: RwLock<HierarchicalState<f64>>,
+    /// Breakthrough #627: Sparse session×noise-type matrix
+    noise_matrix: RwLock<SparseMatrix<String, String, u64>>,
+    /// Breakthrough #592: Content-addressed dedup for noise payloads
+    noise_dedup: DedupStore<String, String>,
 
     sessions: RwLock<HashMap<String, SessionContext>>,
     alerts: RwLock<Vec<AiAlert>>,
@@ -121,6 +127,8 @@ impl ContextWindowStuffingGuard {
             context_diffs: DifferentialStore::new(),
             pruned_alerts: PruningMap::new(5_000),
             util_state: RwLock::new(HierarchicalState::new(8, 64)),
+            noise_matrix: RwLock::new(SparseMatrix::new(0)),
+            noise_dedup: DedupStore::new(),
             sessions: RwLock::new(HashMap::new()),
             alerts: RwLock::new(Vec::new()),
             total_checks: AtomicU64::new(0), total_stuffing: AtomicU64::new(0),

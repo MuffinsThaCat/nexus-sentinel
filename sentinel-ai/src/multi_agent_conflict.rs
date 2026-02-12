@@ -14,9 +14,12 @@
 //! Memory breakthroughs: #627 Sparse, #461 Differential, #569 Pruning, #592 Dedup, #6 Verifier
 
 use crate::types::*;
+use sentinel_core::tiered_cache::TieredCache;
 use sentinel_core::sparse::SparseMatrix;
 use sentinel_core::differential::DifferentialStore;
+use sentinel_core::dedup::DedupStore;
 use sentinel_core::pruning::PruningMap;
+use sentinel_core::hierarchical::HierarchicalState;
 use sentinel_core::MemoryMetrics;
 use sentinel_core::mitre;
 use parking_lot::RwLock;
@@ -186,6 +189,12 @@ pub struct MultiAgentConflictDetector {
     total_starvations: AtomicU64,
     total_resolutions: AtomicU64,
     total_locks: AtomicU64,
+    /// Breakthrough #2: Hot/warm/cold lock lookup cache
+    lock_cache: TieredCache<String, u64>,
+    /// Breakthrough #1: O(log n) conflict trend history
+    conflict_state: RwLock<HierarchicalState<u64>>,
+    /// Breakthrough #592: Content-addressed dedup for conflict fingerprints
+    conflict_dedup: DedupStore<String, String>,
     metrics: Option<MemoryMetrics>,
     enabled: bool,
 }
@@ -212,6 +221,9 @@ impl MultiAgentConflictDetector {
             total_starvations: AtomicU64::new(0),
             total_resolutions: AtomicU64::new(0),
             total_locks: AtomicU64::new(0),
+            lock_cache: TieredCache::new(20_000),
+            conflict_state: RwLock::new(HierarchicalState::new(8, 64)),
+            conflict_dedup: DedupStore::new(),
             metrics: None,
             enabled: true,
         }
