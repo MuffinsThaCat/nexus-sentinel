@@ -268,7 +268,7 @@
 		<header class="h-14 flex items-center justify-between px-6 border-b border-white/[0.04] bg-surface-900/30 flex-shrink-0">
 			<div class="flex items-center gap-3">
 				<h1 class="text-[15px] font-semibold text-white/90 tracking-tight">Beaver Warrior</h1>
-				<span class="text-[11px] text-white/30 font-mono">v0.1.0</span>
+				<span class="text-[11px] text-white/30 font-mono">v{updateInfo.current_version}</span>
 				<button onclick={() => activeTab = 'pricing'} class="px-2 py-0.5 rounded-full text-[10px] font-semibold border {tierBadgeClass(tierInfo.current)} hover:brightness-125 transition-all cursor-pointer">
 					{tierInfo.current === 'Free' ? 'Community' : tierInfo.current}
 				</button>
@@ -298,7 +298,7 @@
 				</div>
 				<div class="flex items-center gap-2 flex-shrink-0">
 					<button
-						onclick={() => window.open(updateInfo.download_url, '_blank')}
+						onclick={() => open(updateInfo.download_url)}
 						class="px-4 py-1.5 rounded-lg text-[12px] font-semibold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all"
 					>
 						Download Update
