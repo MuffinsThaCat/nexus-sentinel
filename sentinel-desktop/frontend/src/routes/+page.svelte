@@ -467,9 +467,15 @@
 							<!-- Tool cards -->
 							<div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
 								{#each aiScan.tools as tool, i}
+									{@const isUnknown = tool.detection_method.startsWith('heuristic')}
 									{@const riskColor = tool.risk_level === 'High' ? 'red' : tool.risk_level === 'Medium' ? 'amber' : 'emerald'}
-									{@const catIcon = tool.category === 'LocalLlm' ? '🧠' : tool.category === 'CodingAssistant' ? '💻' : tool.category === 'DesktopApp' ? '🖥️' : tool.category === 'DevFramework' ? '⚙️' : tool.category === 'ImageAudio' ? '🎨' : '🌐'}
-									<div class="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all animate-in" style="animation-delay:{i * 40}ms">
+									{@const catIcon = isUnknown ? '🚨' : tool.category === 'LocalLlm' ? '🧠' : tool.category === 'CodingAssistant' ? '💻' : tool.category === 'DesktopApp' ? '🖥️' : tool.category === 'DevFramework' ? '⚙️' : tool.category === 'ImageAudio' ? '🎨' : '🌐'}
+									<div class="p-3 rounded-lg transition-all animate-in {isUnknown ? 'bg-red-500/[0.06] border-2 border-red-500/30 hover:border-red-500/50' : 'bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]'}" style="animation-delay:{i * 40}ms">
+										{#if isUnknown}
+											<div class="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-red-500/10 border border-red-500/20">
+												<span class="text-[9px] font-bold text-red-400 uppercase tracking-wider">Unknown AI — Not in Database</span>
+											</div>
+										{/if}
 										<div class="flex items-center gap-2 mb-1.5">
 											<span class="text-sm">{catIcon}</span>
 											<span class="text-[12px] font-semibold text-white/80 truncate flex-1">{tool.name}</span>
@@ -478,9 +484,12 @@
 												{tool.risk_level}
 											</span>
 										</div>
-										<p class="text-[10px] text-white/40 leading-relaxed line-clamp-1 mb-1.5">{tool.details}</p>
-										<div class="flex items-center gap-3 text-[9px] text-white/25 font-mono">
-											<span>via {tool.detection_method}</span>
+										<p class="text-[10px] text-white/40 leading-relaxed mb-1.5 {isUnknown ? '' : 'line-clamp-2'}">{tool.details}</p>
+										{#if tool.privacy_info}
+											<p class="text-[9px] text-white/25 leading-relaxed mb-1.5 line-clamp-2 italic">{tool.privacy_info}</p>
+										{/if}
+										<div class="flex items-center gap-3 text-[9px] text-white/25 font-mono flex-wrap">
+											{#if tool.process_count > 1}<span class="text-cyan-400/60">{tool.process_count} processes</span>{/if}
 											{#if tool.port}<span>:{tool.port}</span>{/if}
 											{#if tool.pid}<span>PID {tool.pid}</span>{/if}
 											{#if tool.memory_bytes > 0}<span>{formatBytes(tool.memory_bytes)}</span>{/if}

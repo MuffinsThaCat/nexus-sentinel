@@ -292,6 +292,8 @@ export interface DiscoveredAiTool {
   cpu_percent: number;
   risk_level: string;
   details: string;
+  privacy_info: string;
+  process_count: number;
   discovered_at: number;
 }
 
