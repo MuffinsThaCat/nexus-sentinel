@@ -327,7 +327,7 @@
 								<div class="flex items-center gap-4">
 									<div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-lg">🚀</div>
 									<div>
-										<h3 class="text-[14px] font-bold text-white/90">Unlock 21 domains & 197 modules</h3>
+										<h3 class="text-[14px] font-bold text-white/90">Unlock 10 more domains & 67 more modules</h3>
 										<p class="text-[12px] text-white/40 mt-0.5">Upgrade to Pro for SIEM, Cloud, Identity, Supply Chain & more — $29/user/mo</p>
 									</div>
 								</div>
