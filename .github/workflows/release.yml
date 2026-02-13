@@ -86,13 +86,9 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Beaver Warrior ${{ github.ref_name }}'
           releaseBody: |
-            v0.4.0 — AI Agent Plan Review Engine: pre-flight security for AI agent actions.
-
-            NEW: Every AI agent action is risk-scored before execution. Chain attack detection,
-            MITRE ATT&CK mapping, goal alignment, blast radius analysis, approval memory.
-            Standalone HTTP server also available with persistence, auth & Prometheus metrics.
-
-            52 AI Agent Security modules, 38 security domains, 286 modules total.
+            55 AI Agent Security modules, 38 security domains, 291 modules total.
+            Real-time malware detection, AI-powered remediation advice.
+            Local-first security. AI-powered intelligence. Your data stays yours.
 
             **Download for your platform below.**
           releaseDraft: false
@@ -183,7 +179,7 @@ jobs:
           {
             "version": "$VERSION",
             "download_url": "https://beaverwarrior.com/BeaverWarrior-macOS.zip",
-            "release_notes": "$GITHUB_REF_NAME — Local AI Discovery & multi-platform release."
+            "release_notes": "$GITHUB_REF_NAME — 55 AI Agent Security modules (7 world-first). 38 security domains, 291 modules total."
           }
           EOF
 
