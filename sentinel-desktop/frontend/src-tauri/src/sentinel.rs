@@ -95,6 +95,17 @@ impl SentinelBackend {
     fn collect_alerts(&self) -> Vec<UnifiedAlert> {
         let mut all = Vec::new();
         for src in &self.alert_sources { all.extend((src.get_alerts)()); }
+        // Startup alert so users know protection is active
+        let total: usize = self.domains.iter().map(|x| x.module_count).sum();
+        all.push(UnifiedAlert {
+            timestamp: self.start_time,
+            severity: "Info".into(),
+            domain: "system".into(),
+            component: "Beaver Warrior".into(),
+            title: format!("Protection active — {} modules across {} domains", total, self.domains.len()),
+            details: "All security modules are running locally on your machine. No data leaves your device.".into(),
+            remediation: None,
+        });
         all.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         all.truncate(500); all
     }

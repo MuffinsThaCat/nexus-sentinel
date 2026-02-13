@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.5.0",
   "download_url": "https://beaverwarrior.com/BeaverWarrior-macOS.zip",
-  "release_notes": "v0.3.0 — 55 AI Agent Security modules (7 world-first). 38 security domains, 291 modules total."
+  "release_notes": "v0.5.0 — 55 AI Agent Security modules, 38 domains, 291 modules. Scroll performance fixes, malware detection, AI remediation."
 }
