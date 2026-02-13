@@ -61,6 +61,7 @@ pub struct EndpointAlert {
     pub component: String,
     pub title: String,
     pub details: String,
+    pub remediation: Option<String>,
     pub process: Option<ProcessInfo>,
     pub file: Option<FileEvent>,
 }

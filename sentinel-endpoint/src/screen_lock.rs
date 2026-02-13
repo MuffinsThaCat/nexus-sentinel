@@ -197,6 +197,7 @@ impl ScreenLockMonitor {
                 component: "screen_lock".to_string(),
                 title: title.to_string(),
                 details: format!("Screen unlocked for {}s without activity (max: {}s, consecutive: {})", idle, self.max_idle_secs, consec),
+                remediation: None,
                 process: None,
                 file: None,
             };

@@ -541,6 +541,7 @@ impl RansomwareDetector {
             component: "ransomware_detect".to_string(),
             title: title.to_string(),
             details: details.to_string(),
+            remediation: None,
             process: None,
             file: None,
         };

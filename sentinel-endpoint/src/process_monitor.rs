@@ -154,7 +154,7 @@ impl ProcessMonitor {
                 let alert = EndpointAlert { timestamp: now, severity: Severity::Critical,
                     component: "process_monitor".to_string(), title: "Suspicious process detected".to_string(),
                     details: format!("Process '{}' (pid {}) matches pattern '{}'", proc.name, proc.pid, pattern),
-                    process: Some(proc.clone()), file: None };
+                    remediation: None, process: Some(proc.clone()), file: None };
                 warn!(name = %proc.name, pid = proc.pid, "Suspicious process detected");
                 self.record_audit(&format!("suspicious|{}|{}|{}", proc.pid, proc.name, pattern));
                 { let mut mat = self.proc_alert_matrix.write(); let cur = *mat.get(&proc.name, &"suspicious".to_string()); mat.set(proc.name.clone(), "suspicious".to_string(), cur + 1); }
@@ -169,7 +169,7 @@ impl ProcessMonitor {
             alerts.push(EndpointAlert { timestamp: now, severity: Severity::Medium,
                 component: "process_monitor".to_string(), title: "High CPU usage".to_string(),
                 details: format!("Process '{}' (pid {}) using {:.1}% CPU", proc.name, proc.pid, proc.cpu_percent),
-                process: Some(proc.clone()), file: None });
+                remediation: None, process: Some(proc.clone()), file: None });
             self.record_audit(&format!("cpu_abuse|{}|{}|{:.1}", proc.pid, proc.name, proc.cpu_percent));
         }
 
@@ -179,7 +179,7 @@ impl ProcessMonitor {
             alerts.push(EndpointAlert { timestamp: now, severity: Severity::Low,
                 component: "process_monitor".to_string(), title: "High memory usage".to_string(),
                 details: format!("Process '{}' (pid {}) using {} MB", proc.name, proc.pid, proc.memory_bytes / (1024 * 1024)),
-                process: Some(proc.clone()), file: None });
+                remediation: None, process: Some(proc.clone()), file: None });
         }
 
         if alerts.is_empty() {

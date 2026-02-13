@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getStatus, getAlerts, getMetrics, getTierInfo, setTier, getAuthState, authLogout, activateLicense, getPaymentUrl, updateProfile, checkForUpdate, refreshTier, getPortalUrl, domainIcons, formatUptime, formatBytes, timeAgo, tierColors, tierGradients, scanLocalAi } from '$lib/tauri';
+	import { getStatus, getAlerts, getMetrics, getTierInfo, setTier, getAuthState, authLogout, activateLicense, getPaymentUrl, updateProfile, checkForUpdate, refreshTier, getPortalUrl, domainIcons, formatUptime, formatBytes, timeAgo, tierColors, tierGradients, scanLocalAi, getRemediation } from '$lib/tauri';
 	import { open } from '@tauri-apps/plugin-shell';
-	import type { StatusResponse, AlertResponse, MetricsResponse, DomainStatus, UnifiedAlert, TierInfo, Tier, AuthState, UserProfile, LicenseResult, UpdateCheck, AiScanResult, DiscoveredAiTool } from '$lib/tauri';
+	import type { StatusResponse, AlertResponse, MetricsResponse, DomainStatus, UnifiedAlert, TierInfo, Tier, AuthState, UserProfile, LicenseResult, UpdateCheck, AiScanResult, DiscoveredAiTool, RemediationResult } from '$lib/tauri';
 
 	let status: StatusResponse = $state({ domains: [], enabled_domains: 0, total_modules: 0, uptime_secs: 0, current_tier: 'Enterprise' });
 	let alerts: AlertResponse = $state({ alerts: [], total: 0, critical: 0, high: 0 });
@@ -22,6 +22,47 @@
 	let updateDismissed = $state(false);
 	let aiScan: AiScanResult = $state({ tools: [], summary: { total_tools: 0, local_llms: 0, coding_assistants: 0, desktop_apps: 0, dev_frameworks: 0, image_audio: 0, high_risk: 0, medium_risk: 0, low_risk: 0, total_ai_memory_bytes: 0 } });
 	let aiScanning = $state(false);
+	let expandedAlert: number | null = $state(null);
+	let remediationCache: Map<string, RemediationResult> = $state(new Map());
+	let remediationLoading: string | null = $state(null);
+	let copiedKey: string | null = $state(null);
+
+	function alertKey(alert: UnifiedAlert): string {
+		return `${alert.component}::${alert.title}`;
+	}
+
+	function parseSteps(advice: string): { num: string; text: string }[] {
+		const lines = advice.split('\n').filter(l => l.trim());
+		const steps: { num: string; text: string }[] = [];
+		for (const line of lines) {
+			const m = line.match(/^\s*(\d+)\.\s+(.+)/);
+			if (m) steps.push({ num: m[1], text: m[2] });
+			else if (steps.length > 0) steps[steps.length - 1].text += ' ' + line.trim();
+			else steps.push({ num: '', text: line.trim() });
+		}
+		return steps;
+	}
+
+	function copyAdvice(key: string, advice: string) {
+		navigator.clipboard.writeText(advice);
+		copiedKey = key;
+		setTimeout(() => { copiedKey = null; }, 2000);
+	}
+
+	async function requestRemediation(alert: UnifiedAlert, index: number) {
+		const key = alertKey(alert);
+		if (expandedAlert === index && remediationCache.has(key)) {
+			expandedAlert = null;
+			return;
+		}
+		expandedAlert = index;
+		if (remediationCache.has(key)) return;
+		remediationLoading = key;
+		const result = await getRemediation(alert.severity, alert.component, alert.title, alert.details);
+		remediationCache.set(key, result);
+		remediationCache = new Map(remediationCache);
+		remediationLoading = null;
+	}
 
 	onMount(() => {
 		async function refresh() {
@@ -614,19 +655,135 @@
 					{:else}
 						<div class="space-y-2">
 							{#each alerts.alerts as alert, i}
-								<div class="glass-bright p-4 flex items-start gap-4 animate-in" style="animation-delay:{i * 30}ms">
-									<span class="badge {severityClass(alert.severity)} mt-0.5 flex-shrink-0">{alert.severity}</span>
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center gap-2 mb-1">
-											<span class="text-[13px] font-medium text-white/80">{alert.title}</span>
+								{@const key = alertKey(alert)}
+								{@const isExpanded = expandedAlert === i}
+								{@const rem = remediationCache.get(key)}
+								{@const isLoading = remediationLoading === key}
+								<div class="glass-bright animate-in {isExpanded ? 'ring-1 ring-cyan-500/20' : ''}" style="animation-delay:{i * 30}ms">
+									<div class="p-4 flex items-start gap-4">
+										<span class="badge {severityClass(alert.severity)} mt-0.5 flex-shrink-0">{alert.severity}</span>
+										<div class="flex-1 min-w-0">
+											<div class="flex items-center gap-2 mb-1">
+												<span class="text-[13px] font-medium text-white/80">{alert.title}</span>
+											</div>
+											<p class="text-[12px] text-white/40 leading-relaxed">{alert.details}</p>
+											<div class="flex items-center gap-3 mt-1.5">
+												<span class="text-[10px] text-white/25 font-mono">{alert.domain}</span>
+												<span class="text-[10px] text-white/25 font-mono">{alert.component}</span>
+												<button
+													onclick={() => requestRemediation(alert, i)}
+													class="ml-auto flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-all
+														{isExpanded
+															? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+															: 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-cyan-500/10 hover:text-cyan-400 hover:border-cyan-500/20'}"
+												>
+													{#if isLoading}
+														<svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+													{:else}
+														<svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+													{/if}
+													{isExpanded ? 'Hide Fix' : 'Get Fix'}
+												</button>
+											</div>
 										</div>
-										<p class="text-[12px] text-white/40 leading-relaxed">{alert.details}</p>
-										<div class="flex gap-3 mt-1.5 text-[10px] text-white/25 font-mono">
-											<span>{alert.domain}</span>
-											<span>{alert.component}</span>
-										</div>
+										<span class="text-[11px] text-white/20 font-mono flex-shrink-0 tabular-nums">{timeAgo(alert.timestamp)}</span>
 									</div>
-									<span class="text-[11px] text-white/20 font-mono flex-shrink-0 tabular-nums">{timeAgo(alert.timestamp)}</span>
+
+									{#if isExpanded && rem}
+										<div class="remediation-panel px-4 pb-4 pt-1">
+											{#if rem.gated}
+												<div class="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 via-surface-900/60 to-purple-950/30 p-5">
+													<div class="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.03] via-transparent to-purple-500/[0.03] upgrade-shimmer"></div>
+													<div class="relative flex items-center gap-4">
+														<div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-400/20 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/10">
+															<svg viewBox="0 0 24 24" class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" /></svg>
+														</div>
+														<div class="flex-1 min-w-0">
+															<p class="text-[13px] font-semibold text-indigo-300/90 mb-0.5">AI-Powered Remediation</p>
+															<p class="text-[11px] text-white/40 leading-relaxed">{rem.message}</p>
+														</div>
+														<button onclick={() => handlePayment('Pro')} class="px-4 py-2 rounded-xl text-[12px] font-semibold bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-300 border border-indigo-400/25 hover:from-indigo-500/35 hover:to-purple-500/35 hover:border-indigo-400/40 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 flex-shrink-0">
+															Upgrade to Pro
+														</button>
+													</div>
+												</div>
+											{:else}
+												{@const steps = parseSteps(rem.advice ?? '')}
+												<div class="rounded-xl border border-cyan-500/10 bg-gradient-to-b from-cyan-950/20 to-transparent overflow-hidden">
+													<div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
+														<div class="w-5 h-5 rounded-md bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
+															<svg viewBox="0 0 24 24" class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" /></svg>
+														</div>
+														<span class="text-[11px] font-semibold text-cyan-400/80 uppercase tracking-wider">Remediation Plan</span>
+														<span class="text-[10px] text-white/15 font-mono">&middot;</span>
+														<span class="text-[10px] text-white/20 font-mono">{steps.length} step{steps.length !== 1 ? 's' : ''}</span>
+														<div class="flex-1"></div>
+														{#if rem.cached}<span class="text-[9px] text-white/20 font-mono px-1.5 py-0.5 rounded bg-white/[0.03]">cached</span>{/if}
+														<div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03]">
+															<div class="w-1 h-1 rounded-full {(rem.model ?? '').includes('heuristic') ? 'bg-amber-400/60' : 'bg-cyan-400/60'}"></div>
+															<span class="text-[9px] text-white/25 font-mono">{(rem.model ?? '').includes('heuristic') ? 'built-in' : 'AI'}</span>
+														</div>
+														<button onclick={() => copyAdvice(key, rem.advice ?? '')} class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-all {copiedKey === key ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06]'}">
+															{#if copiedKey === key}
+																<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+																Copied
+															{:else}
+																<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+																Copy
+															{/if}
+														</button>
+													</div>
+													<div class="p-4 space-y-0">
+														{#each steps as step, si}
+															<div class="flex gap-3 group remediation-step" style="animation-delay:{si * 60}ms">
+																<div class="flex flex-col items-center flex-shrink-0">
+																	{#if step.num}
+																		<div class="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500/15 to-blue-500/15 border border-cyan-500/20 flex items-center justify-center text-[10px] font-bold text-cyan-400/80 shadow-sm shadow-cyan-500/5 group-hover:from-cyan-500/25 group-hover:to-blue-500/25 group-hover:border-cyan-500/30 transition-all duration-200">{step.num}</div>
+																	{:else}
+																		<div class="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center"><div class="w-1.5 h-1.5 rounded-full bg-white/20"></div></div>
+																	{/if}
+																	{#if si < steps.length - 1}
+																		<div class="w-px flex-1 min-h-[12px] bg-gradient-to-b from-cyan-500/15 to-transparent my-1"></div>
+																	{/if}
+																</div>
+																<div class="flex-1 pb-3 {si < steps.length - 1 ? '' : 'pb-0'}">
+																	<p class="text-[12px] text-white/60 leading-relaxed group-hover:text-white/75 transition-colors duration-200">{step.text}</p>
+																</div>
+															</div>
+														{/each}
+													</div>
+												</div>
+											{/if}
+										</div>
+									{:else if isExpanded && isLoading}
+										<div class="remediation-panel px-4 pb-4 pt-1">
+											<div class="rounded-xl border border-cyan-500/10 bg-gradient-to-b from-cyan-950/20 to-transparent overflow-hidden">
+												<div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
+													<div class="w-5 h-5 rounded-md shimmer bg-white/[0.04]"></div>
+													<div class="h-3 w-28 rounded shimmer bg-white/[0.04]"></div>
+													<div class="flex-1"></div>
+													<div class="h-3 w-12 rounded shimmer bg-white/[0.04]"></div>
+												</div>
+												<div class="p-4 space-y-3">
+													{#each Array(4) as _, si}
+														<div class="flex gap-3 items-start" style="opacity:{1 - si * 0.15}">
+															<div class="w-6 h-6 rounded-lg shimmer bg-white/[0.04] flex-shrink-0"></div>
+															<div class="flex-1 space-y-1.5 pt-0.5">
+																<div class="h-3 rounded shimmer bg-white/[0.04]" style="width:{85 - si * 12}%"></div>
+																{#if si < 2}
+																	<div class="h-3 rounded shimmer bg-white/[0.04]" style="width:{60 - si * 15}%"></div>
+																{/if}
+															</div>
+														</div>
+													{/each}
+												</div>
+												<div class="px-4 py-2.5 border-t border-white/[0.04] flex items-center justify-center gap-2">
+													<div class="ai-pulse w-1.5 h-1.5 rounded-full bg-cyan-400/80"></div>
+													<span class="text-[11px] text-cyan-400/50 font-medium">Analyzing threat and generating remediation plan...</span>
+												</div>
+											</div>
+										</div>
+									{/if}
 								</div>
 							{/each}
 						</div>

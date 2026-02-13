@@ -169,7 +169,7 @@ impl RegistryMonitor {
             details: format!("{}:{} changed from {:?} to {:?}{}", change.path, change.key,
                 change.old_value.as_deref().unwrap_or("(unset)"), change.new_value.as_deref().unwrap_or("(deleted)"),
                 change.process_name.as_ref().map(|p| format!(" by {}", p)).unwrap_or_default()),
-            process: None, file: None };
+            remediation: None, process: None, file: None };
 
         let mut alerts = self.alerts.write();
         if alerts.len() >= self.max_alerts { alerts.remove(0); }

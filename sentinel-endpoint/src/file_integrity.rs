@@ -182,7 +182,7 @@ impl FileIntegrityMonitor {
         let alert = EndpointAlert { timestamp: now, severity, component: "file_integrity".to_string(),
             title: "File integrity violation".to_string(),
             details: format!("{}: {}", path.display(), changes.join(", ")),
-            process: None, file: Some(FileEvent { path: path.clone(), event_type: FileEventType::Modified,
+            remediation: None, process: None, file: Some(FileEvent { path: path.clone(), event_type: FileEventType::Modified,
                 timestamp: now, process_name: None, process_pid: None,
                 size_bytes: Some(current_size), hash_sha256: Some(current_hash.to_string()) }) };
 

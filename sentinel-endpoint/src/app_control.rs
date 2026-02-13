@@ -171,7 +171,7 @@ impl AppControl {
             let alert = EndpointAlert { timestamp: chrono::Utc::now().timestamp(), severity: Severity::High,
                 component: "app_control".to_string(), title: "Application execution blocked".to_string(),
                 details: format!("Blocked '{}' at {} (hash: {})", process_name, exe_path.display(), &hash_lower[..hash_lower.len().min(16)]),
-                process: None, file: None };
+                remediation: None, process: None, file: None };
 
             let mut alerts = self.alerts.write();
             if alerts.len() >= self.max_alerts { alerts.remove(0); }

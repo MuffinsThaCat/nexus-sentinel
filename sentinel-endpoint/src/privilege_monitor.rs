@@ -176,7 +176,7 @@ impl PrivilegeMonitor {
         let alert = EndpointAlert { timestamp: now, severity, component: "privilege_monitor".to_string(),
             title: "Privilege escalation detected".to_string(),
             details: format!("Process '{}' (pid {}) escalated {} → {} via {:?}", event.process_name, event.pid, event.from_user, event.to_user, event.method),
-            process: None, file: None };
+            remediation: None, process: None, file: None };
 
         let mut alerts = self.alerts.write();
         if alerts.len() >= self.max_alerts { alerts.remove(0); }

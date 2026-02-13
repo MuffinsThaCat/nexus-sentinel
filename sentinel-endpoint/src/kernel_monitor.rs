@@ -153,7 +153,7 @@ impl KernelMonitor {
             Some(EndpointAlert { timestamp: now, severity: Severity::Critical,
                 component: "kernel_monitor".to_string(), title: "Unsigned kernel module loaded".to_string(),
                 details: format!("Module '{}' at {} is not signed", module.name, module.path),
-                process: None, file: None })
+                remediation: None, process: None, file: None })
         } else if !is_known {
             self.unknown_alerts.fetch_add(1, Ordering::Relaxed);
             { let mut mat = self.module_alert_matrix.write(); let cur = *mat.get(&module.name, &"unknown".to_string()); mat.set(module.name.clone(), "unknown".to_string(), cur + 1); }
@@ -163,7 +163,7 @@ impl KernelMonitor {
             Some(EndpointAlert { timestamp: now, severity: Severity::High,
                 component: "kernel_monitor".to_string(), title: "Unknown kernel module loaded".to_string(),
                 details: format!("Module '{}' hash {} not in known-good list", module.name, &hash_lower[..hash_lower.len().min(16)]),
-                process: None, file: None })
+                remediation: None, process: None, file: None })
         } else {
             { let mut rc = self.alert_rate_computer.write(); rc.push((module.name.clone(), 0.0)); }
             None

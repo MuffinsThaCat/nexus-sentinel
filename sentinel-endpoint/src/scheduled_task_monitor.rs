@@ -169,6 +169,7 @@ impl ScheduledTaskMonitor {
                 component: "scheduled_task_monitor".to_string(),
                 title: "New scheduled task detected".to_string(),
                 details: format!("Task '{}' added: cmd='{}' schedule='{}' user='{}'", task.name, task.command, task.schedule, task.user),
+                remediation: None,
                 process: None,
                 file: None,
             };
@@ -188,6 +189,7 @@ impl ScheduledTaskMonitor {
                 component: "scheduled_task_monitor".to_string(),
                 title: "Scheduled task modified".to_string(),
                 details: format!("Task '{}' modified: cmd='{}' schedule='{}'", task.name, task.command, task.schedule),
+                remediation: None,
                 process: None,
                 file: None,
             };

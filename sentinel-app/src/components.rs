@@ -222,7 +222,7 @@ pub fn bootstrap(config: &SentinelConfig, metrics: MemoryMetrics) -> SecuritySta
         dom!(s, "privacy", "Privacy", true, 4);
     } else { dom!(s, "privacy", "Privacy", false, 0); }
 
-    // 17. AI Agent Security (52 modules — most comprehensive AI security layer in existence)
+    // 17. AI Agent Security (55 modules — most comprehensive AI security layer in existence)
     if config.ai.enabled {
         // ── Imports: Core AI monitoring ─────────────────────────────────────
         use sentinel_ai::shadow_ai_detector::ShadowAiDetector;
@@ -343,7 +343,7 @@ pub fn bootstrap(config: &SentinelConfig, metrics: MemoryMetrics) -> SecuritySta
         reg!(c, "ai", "Fine-Tuning Attack Detector", FineTuningAttackDetector::new());
         reg!(c, "ai", "Reward Hacking Detector", RewardHackingDetector::new());
         reg!(c, "ai", "Model Drift Sentinel", ModelDriftSentinel::new());
-        dom!(s, "ai", "AI Agent Security", true, 52);
+        dom!(s, "ai", "AI Agent Security", true, 55);
     } else { dom!(s, "ai", "AI Agent Security", false, 0); }
 
     // 18. Deception (no with_metrics on core modules)

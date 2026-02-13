@@ -11,3 +11,6 @@ pub mod login_monitor;
 pub mod clipboard_monitor;
 pub mod screen_lock;
 pub mod scheduled_task_monitor;
+pub mod malware_scanner;
+pub mod download_guard;
+pub mod remediation;

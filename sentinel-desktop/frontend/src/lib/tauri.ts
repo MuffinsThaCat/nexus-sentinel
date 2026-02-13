@@ -31,6 +31,7 @@ export interface UnifiedAlert {
   component: string;
   title: string;
   details: string;
+  remediation?: string;
 }
 
 export interface StatusResponse {
@@ -115,7 +116,7 @@ export const domainIcons: Record<string, string> = {
   threat_intel: '🧠', forensics: '🔬', vuln: '⚠️', web: '🌍',
   container: '📦', supply_chain: '🔗', compliance: '📋', privacy: '👁️',
   ai: '🤖', deception: '🪤', browser: '🌐', api: '⚡',
-  vpn: '🔒', hardware: '🔧', exfiltration: '📤', mgmt: '⚙️',
+  vpn: '🔒', hardware: '🔧', malware: '🦠', exfiltration: '📤', mgmt: '⚙️',
   selfprotect: '🛡️', phishing: '🎣', crypto: '🔐', resilience: '💪',
   mobile: '📱', darkweb: '🕶️', ot: '🏭', microseg: '🧩',
   backup: '💾', cloud: '☁️', time: '⏱️', soceng: '🎭',
@@ -617,5 +618,45 @@ export async function setRiaEnabled(enabled: boolean): Promise<boolean> {
     return await invoke<boolean>('set_ria_enabled', { enabled });
   } catch {
     return false;
+  }
+}
+
+// ── Remediation Engine (Pro-tier LLM advice) ─────────────────────────────
+
+export interface RemediationResult {
+  gated: boolean;
+  message?: string;
+  required_tier?: string;
+  advice?: string;
+  cached?: boolean;
+  model?: string;
+  generated_at?: number;
+}
+
+export interface RemediationStats {
+  total_requests: number;
+  cache_hits: number;
+  cache_size: number;
+  endpoint: string;
+}
+
+export async function getRemediation(
+  severity: string,
+  component: string,
+  title: string,
+  details: string,
+): Promise<RemediationResult> {
+  try {
+    return await invoke<RemediationResult>('get_remediation', { severity, component, title, details });
+  } catch {
+    return { gated: false, advice: 'Unable to generate remediation advice at this time.', model: 'error' };
+  }
+}
+
+export async function getRemediationStats(): Promise<RemediationStats> {
+  try {
+    return await invoke<RemediationStats>('get_remediation_stats');
+  } catch {
+    return { total_requests: 0, cache_hits: 0, cache_size: 0, endpoint: '' };
   }
 }

@@ -13,14 +13,15 @@ impl Tier {
 
 pub fn domain_tier(domain: &str) -> Tier {
     match domain {
-        // Free: 11 domains, 130 modules (includes 52-module AI Agent Security)
+        // Free: 11 domains, 133 modules (includes 55-module AI Agent Security)
         "network" | "endpoint" | "dns" | "email" | "browser"
         | "phishing" | "privacy" | "selfprotect" | "vpn" | "vuln"
         | "ai" => Tier::Free,
-        // Pro: +10 domains (21 total), 197 modules
+        // Pro: +11 domains (22 total), 202 modules
         "identity" | "siem" | "cloud" | "container" | "supply_chain"
-        | "data" | "api" | "web" | "exfiltration" | "mgmt" => Tier::Pro,
-        // Enterprise: +17 domains (38 total), 286 modules
+        | "data" | "api" | "web" | "exfiltration" | "mgmt"
+        | "malware" => Tier::Pro,
+        // Enterprise: +17 domains (38 total), 291 modules
         _ => Tier::Enterprise,
     }
 }
@@ -28,7 +29,7 @@ pub fn domain_tier(domain: &str) -> Tier {
 #[derive(Debug, Clone, Serialize)]
 pub struct DomainStatus { pub domain: String, pub display_name: String, pub enabled: bool, pub module_count: usize, pub tier: Tier }
 #[derive(Debug, Clone, Serialize)]
-pub struct UnifiedAlert { pub timestamp: i64, pub severity: String, pub domain: String, pub component: String, pub title: String, pub details: String }
+pub struct UnifiedAlert { pub timestamp: i64, pub severity: String, pub domain: String, pub component: String, pub title: String, pub details: String, pub remediation: Option<String> }
 #[derive(Debug, Clone, Serialize)]
 pub struct StatusResponse { pub domains: Vec<DomainStatus>, pub enabled_domains: usize, pub total_modules: usize, pub uptime_secs: i64, pub current_tier: Tier }
 #[derive(Debug, Clone, Serialize)]
@@ -60,6 +61,7 @@ macro_rules! reg {
                 r.alerts().into_iter().map(|a| UnifiedAlert {
                     timestamp: a.timestamp, severity: format!("{:?}", a.severity),
                     domain: $d.into(), component: a.component, title: a.title, details: a.details,
+                    remediation: None,
                 }).collect()
             }),
         });
@@ -99,7 +101,7 @@ impl SentinelBackend {
 }
 
 fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Vec<Box<dyn std::any::Any + Send + Sync>>, m: sentinel_core::MemoryMetrics) {
-    // ── 1. Network (15 modules, non-standard alerts → noa) ──
+    // ── 1. Network (15 modules) ──
     { use sentinel_network::firewall::Firewall;
       use sentinel_network::ids::{IntrusionDetector, IdsMode};
       use sentinel_network::flow_monitor::FlowMonitor;
@@ -115,10 +117,47 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       use sentinel_network::rate_limiter::RateLimiter;
       use sentinel_network::traffic_shaper::TrafficShaper;
       use sentinel_network::vpn_monitor::VpnMonitor;
-      noa!(k, Firewall::new().with_metrics(m.clone()));
-      noa!(k, IntrusionDetector::new(IdsMode::Detection).with_metrics(m.clone()));
+      // Firewall — adapt sentinel_network::types::Alert → UnifiedAlert
+      { let fw = Arc::new(Firewall::new().with_metrics(m.clone())); let r = fw.clone();
+        s.push(AlertSource { _domain: "network".into(), _name: "Firewall".into(),
+            get_alerts: Box::new(move || {
+                r.alerts().into_iter().map(|a| UnifiedAlert {
+                    timestamp: a.timestamp, severity: format!("{:?}", a.severity),
+                    domain: "network".into(), component: "Firewall".into(),
+                    title: a.rule_name.clone(),
+                    details: format!("{} | {}:{} → {}:{}", a.message, a.src_ip, a.src_port, a.dst_ip, a.dst_port),
+                    remediation: None,
+                }).collect()
+            }),
+        }); k.push(Box::new(fw)); }
+      // IDS — adapt recent_alerts() → UnifiedAlert
+      { let ids = Arc::new(IntrusionDetector::new(IdsMode::Detection).with_metrics(m.clone())); let r = ids.clone();
+        s.push(AlertSource { _domain: "network".into(), _name: "IDS".into(),
+            get_alerts: Box::new(move || {
+                r.recent_alerts().into_iter().map(|a| UnifiedAlert {
+                    timestamp: a.timestamp, severity: format!("{:?}", a.severity),
+                    domain: "network".into(), component: "IDS".into(),
+                    title: a.rule_name.clone(),
+                    details: format!("{} | {}:{} → {}:{}", a.message, a.src_ip, a.src_port, a.dst_ip, a.dst_port),
+                    remediation: None,
+                }).collect()
+            }),
+        }); k.push(Box::new(ids)); }
+      // ARP Guard — adapt ArpSpoofAlert → UnifiedAlert
+      { let arp = Arc::new(ArpGuard::new().with_metrics(m.clone())); let r = arp.clone();
+        s.push(AlertSource { _domain: "network".into(), _name: "ARP Guard".into(),
+            get_alerts: Box::new(move || {
+                r.alerts().into_iter().map(|a| UnifiedAlert {
+                    timestamp: a.timestamp, severity: format!("{:?}", a.severity),
+                    domain: "network".into(), component: "ARP Guard".into(),
+                    title: format!("{:?} on {}", a.alert_type, a.ip),
+                    details: format!("{} | expected={} observed={} conf={:.0}%", a.details, a.expected_mac, a.observed_mac, a.confidence * 100.0),
+                    remediation: None,
+                }).collect()
+            }),
+        }); k.push(Box::new(arp)); }
+      // Infrastructure modules (no alert feeds)
       noa!(k, FlowMonitor::new(1000).with_metrics(m.clone()));
-      noa!(k, ArpGuard::new().with_metrics(m.clone()));
       noa!(k, PortScanDetector::new().with_metrics(m.clone()));
       noa!(k, BandwidthMonitor::new(1_000_000_000).with_metrics(m.clone()));
       noa!(k, CertValidator::new().with_metrics(m.clone()));
@@ -158,6 +197,13 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "endpoint", "Screen Lock", ScreenLockMonitor::new(300).with_metrics(m.clone()));
       reg!(s, "endpoint", "App Control", AppControl::new(sentinel_endpoint::app_control::PolicyMode::Allowlist).with_metrics(m.clone()));
       dom!(d, "endpoint", "Endpoint Protection", 12); }
+
+    // ── 2b. Malware Scanner + Download Guard — Pro (2 modules, 22 internal engines) ──
+    { use sentinel_endpoint::malware_scanner::MalwareScanner;
+      use sentinel_endpoint::download_guard::DownloadGuard;
+      noa!(k, MalwareScanner::new());
+      reg!(s, "malware", "Download Guard", DownloadGuard::new());
+      dom!(d, "malware", "Malware Scanner", 2); }
 
     // ── 3. DNS (10 modules) ──
     { use sentinel_dns::dns_filter::DnsFilter;
@@ -230,7 +276,7 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "identity", "User Behavior", UserBehaviorAnalytics::new(0.8).with_metrics(m.clone()));
       dom!(d, "identity", "Identity & Access", 9); }
 
-    // ── 6. SIEM (10 modules, non-standard alerts → noa) ──
+    // ── 6. SIEM (10 modules) ──
     { use sentinel_siem::correlation_engine::CorrelationEngine;
       use sentinel_siem::alert_manager::AlertManager;
       use sentinel_siem::audit_trail::AuditTrail;
@@ -241,7 +287,20 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       use sentinel_siem::log_parser::LogParser;
       use sentinel_siem::log_storage::LogStorage;
       use sentinel_siem::report_generator::ReportGenerator as SiemReportGenerator;
-      noa!(k, CorrelationEngine::new().with_metrics(m.clone()));
+      // Correlation Engine — adapt SiemAlert → UnifiedAlert
+      { let ce = Arc::new(CorrelationEngine::new().with_metrics(m.clone())); let r = ce.clone();
+        s.push(AlertSource { _domain: "siem".into(), _name: "Correlation Engine".into(),
+            get_alerts: Box::new(move || {
+                r.alerts().into_iter().map(|a| UnifiedAlert {
+                    timestamp: a.timestamp, severity: format!("{:?}", a.severity),
+                    domain: "siem".into(), component: "Correlation Engine".into(),
+                    title: a.title,
+                    details: format!("{} | rule={} events={}", a.details, a.rule_name, a.source_events.len()),
+                    remediation: None,
+                }).collect()
+            }),
+        }); k.push(Box::new(ce)); }
+      // Infrastructure modules (no alert feeds)
       noa!(k, AlertManager::new(10000).with_metrics(m.clone()));
       noa!(k, AuditTrail::new(10000).with_metrics(m.clone()));
       noa!(k, ComplianceLogger::new(10000).with_metrics(m.clone()));
@@ -411,7 +470,7 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "privacy", "Tracker Blocker", TrackerBlocker::new().with_metrics(m.clone()));
       dom!(d, "privacy", "Privacy", 6); }
 
-    // ── 17. AI Agent Security (52 modules — most comprehensive AI security layer in existence) ──
+    // ── 17. AI Agent Security (55 modules — most comprehensive AI security layer in existence) ──
     { // ── Imports: Core AI monitoring ─────────────────────────────────────
       use sentinel_ai::shadow_ai_detector::ShadowAiDetector;
       use sentinel_ai::api_key_monitor::ApiKeyMonitor;
@@ -471,6 +530,9 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       use sentinel_ai::fine_tuning_attack_detector::FineTuningAttackDetector;
       use sentinel_ai::reward_hacking_detector::RewardHackingDetector;
       use sentinel_ai::model_drift_sentinel::ModelDriftSentinel;
+      // ── Imports: NEW — Agent plan review & response integrity ────────
+      use sentinel_ai::plan_review_engine::PlanReviewEngine;
+      use sentinel_ai::response_integrity_analyzer::ResponseIntegrityAnalyzer;
 
       // ── Registration: Core AI monitoring ───────────────────────────────
       reg!(s, "ai", "Shadow AI Detector", ShadowAiDetector::new().with_metrics(m.clone()));
@@ -533,7 +595,10 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "ai", "Model Drift Sentinel", ModelDriftSentinel::new());
       use sentinel_ai::local_ai_discovery::LocalAiDiscovery;
       reg!(s, "ai", "Local AI Discovery", LocalAiDiscovery::new());
-      dom!(d, "ai", "AI Agent Security", 53); }
+      // ── Registration: Agent plan review & response integrity ──────────
+      reg!(s, "ai", "Plan Review Engine", PlanReviewEngine::new());
+      reg!(s, "ai", "Response Integrity", ResponseIntegrityAnalyzer::new());
+      dom!(d, "ai", "AI Agent Security", 55); }
 
     // ── 18. Deception (6 modules) ──
     { use sentinel_deception::dns_canary::DnsCanary;
@@ -878,7 +943,7 @@ pub fn get_tier_info(backend: tauri::State<'_, Arc<SentinelBackend>>) -> TierInf
             TierDetail {
                 tier: Tier::Pro, name: "Pro".into(), price: "$29/user/mo".into(),
                 domains: pd, modules: pm,
-                features: vec!["50 endpoints".into(), "30-day retention".into(), "Team dashboard".into(), "Webhook integrations".into(), "SOC 2 reports".into()],
+                features: vec!["50 endpoints".into(), "30-day retention".into(), "AI remediation advice".into(), "Team dashboard".into(), "Webhook integrations".into(), "SOC 2 reports".into()],
             },
             TierDetail {
                 tier: Tier::Enterprise, name: "Enterprise".into(), price: "$99/user/mo".into(),
@@ -911,7 +976,7 @@ pub fn scan_local_ai() -> serde_json::Value {
 // ── Plan Review Engine ──────────────────────────────────────────────────────
 
 use sentinel_ai::plan_review_engine::{
-    PlanReviewEngine, AgentPlan, PlanReview, RiskLevel, PlanAction,
+    PlanReviewEngine, AgentPlan, PlanReview, PlanAction,
 };
 
 #[tauri::command]
@@ -1006,8 +1071,7 @@ pub fn set_plan_review_enabled(
 // ── Response Integrity Analyzer Commands ─────────────────────────────────
 
 use sentinel_ai::response_integrity_analyzer::{
-    ResponseIntegrityAnalyzer, LlmResponse, ResponseAnalysis, IntegrityStats,
-    IntegrityLevel,
+    ResponseIntegrityAnalyzer, LlmResponse, ResponseAnalysis,
 };
 
 #[tauri::command]
@@ -1072,4 +1136,49 @@ pub fn set_ria_enabled(
     analyzer.set_enabled(enabled);
     log::info!("Response Integrity Analyzer enabled: {}", enabled);
     enabled
+}
+
+// ── Remediation Engine (Pro-tier LLM-powered advice) ─────────────────────
+
+use sentinel_endpoint::remediation::{RemediationEngine, RemediationRequest};
+
+#[tauri::command]
+pub async fn get_remediation(
+    backend: tauri::State<'_, Arc<SentinelBackend>>,
+    user_store: tauri::State<'_, Arc<crate::auth::UserStore>>,
+    engine: tauri::State<'_, Arc<RemediationEngine>>,
+    severity: String,
+    component: String,
+    title: String,
+    details: String,
+) -> Result<serde_json::Value, String> {
+    let tier = *backend.current_tier.read();
+    if tier < Tier::Pro {
+        return Ok(serde_json::json!({
+            "gated": true,
+            "message": "AI-powered remediation advice is a Pro feature. Upgrade to unlock step-by-step fix instructions for every alert.",
+            "required_tier": "Pro",
+        }));
+    }
+    let auth_state = user_store.get_auth_state();
+    let email = match auth_state.user {
+        Some(ref u) => u.email.clone(),
+        None => return Err("Not authenticated".into()),
+    };
+    let req = RemediationRequest { severity, component, title, details };
+    let resp = engine.generate(&req, &email).await;
+    Ok(serde_json::json!({
+        "gated": false,
+        "advice": resp.advice,
+        "cached": resp.cached,
+        "model": resp.model,
+        "generated_at": resp.generated_at,
+    }))
+}
+
+#[tauri::command]
+pub fn get_remediation_stats(
+    engine: tauri::State<'_, Arc<RemediationEngine>>,
+) -> serde_json::Value {
+    engine.stats()
 }

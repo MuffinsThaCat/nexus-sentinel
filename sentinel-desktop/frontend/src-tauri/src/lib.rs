@@ -13,6 +13,7 @@ pub fn run() {
     let user_store = Arc::new(auth::UserStore::new());
     let plan_engine = Arc::new(sentinel_ai::plan_review_engine::PlanReviewEngine::new());
     let ria = Arc::new(sentinel_ai::response_integrity_analyzer::ResponseIntegrityAnalyzer::new());
+    let remediation_engine = Arc::new(sentinel_endpoint::remediation::RemediationEngine::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
@@ -21,6 +22,7 @@ pub fn run() {
         .manage(user_store)
         .manage(plan_engine)
         .manage(ria)
+        .manage(remediation_engine)
         .invoke_handler(tauri::generate_handler![
             sentinel::get_status,
             sentinel::get_alerts,
@@ -54,6 +56,8 @@ pub fn run() {
             sentinel::get_ria_history,
             sentinel::get_ria_finding_matrix,
             sentinel::set_ria_enabled,
+            sentinel::get_remediation,
+            sentinel::get_remediation_stats,
         ])
         .setup(|app| {
             // System tray with menu

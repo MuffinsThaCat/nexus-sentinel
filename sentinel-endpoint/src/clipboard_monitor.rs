@@ -202,6 +202,7 @@ impl ClipboardMonitor {
                 component: "clipboard_monitor".to_string(),
                 title: "Sensitive data in clipboard".to_string(),
                 details: format!("{:?} data ({} chars) copied by {:?}", data_type, content.len(), source_process),
+                remediation: None,
                 process: None,
                 file: None,
             };

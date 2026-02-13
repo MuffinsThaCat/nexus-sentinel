@@ -177,7 +177,7 @@ impl UsbGuard {
         let alert = EndpointAlert { timestamp: now, severity, component: "usb_guard".to_string(),
             title: title.to_string(),
             details: format!("Device {:04x}:{:04x} '{}' class={:?}", device.vendor_id, device.product_id, device.product_name, device.device_class),
-            process: None, file: None };
+            remediation: None, process: None, file: None };
 
         let mut alerts = self.alerts.write();
         if alerts.len() >= self.max_alerts { alerts.remove(0); }

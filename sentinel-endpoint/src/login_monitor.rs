@@ -172,7 +172,7 @@ impl LoginMonitor {
             let alert = EndpointAlert {
                 timestamp: now,
                 severity: Severity::High,
-                component: "login_monitor".to_string(),
+                component: "login_monitor".to_string(), remediation: None,
                 title: "Brute force login detected".to_string(),
                 details: format!("User '{}' has {} failed logins in {}s from {}", attempt.username, fail_count, self.window_secs, ip),
                 process: None,

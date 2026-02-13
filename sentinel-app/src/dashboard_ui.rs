@@ -185,7 +185,7 @@ footer{text-align:center;padding:16px;font-size:11px;color:#334155;border-top:1p
 <div class="panel-body"><div class="domain-grid" id="domain-grid"></div></div>
 </div>
 <div class="panel" style="grid-column:1/-1">
-<div class="panel-header" style="background:linear-gradient(90deg,rgba(139,92,246,0.15),rgba(6,182,212,0.15))"><span style="color:var(--purple)">AI Agent Security — 52 Modules (7 World-First)</span><span id="ai-alert-count"></span></div>
+<div class="panel-header" style="background:linear-gradient(90deg,rgba(139,92,246,0.15),rgba(6,182,212,0.15))"><span style="color:var(--purple)">AI Agent Security — 55 Modules (7 World-First)</span><span id="ai-alert-count"></span></div>
 <div class="panel-body" id="ai-panel"><div class="no-data">Loading AI security...</div></div>
 </div>
 <div class="panel">

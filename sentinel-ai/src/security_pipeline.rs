@@ -1,4 +1,4 @@
-//! Security Pipeline — Unified defense-in-depth orchestrator for all 52 AI security modules.
+//! Security Pipeline — Unified defense-in-depth orchestrator for all 55 AI security modules.
 //!
 //! Chains all AI security modules into a coherent flow:
 //!
