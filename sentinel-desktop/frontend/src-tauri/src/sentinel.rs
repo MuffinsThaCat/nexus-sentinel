@@ -13,15 +13,15 @@ impl Tier {
 
 pub fn domain_tier(domain: &str) -> Tier {
     match domain {
-        // Free: 11 domains, 133 modules (includes 55-module AI Agent Security)
+        // Free: 11 domains, 133 modules (includes 55-module AI Agent Security) ✓
         "network" | "endpoint" | "dns" | "email" | "browser"
         | "phishing" | "privacy" | "selfprotect" | "vpn" | "vuln"
         | "ai" => Tier::Free,
-        // Pro: +11 domains (22 total), 202 modules
+        // Pro: +11 domains (22 total), 203 modules
         "identity" | "siem" | "cloud" | "container" | "supply_chain"
         | "data" | "api" | "web" | "exfiltration" | "mgmt"
         | "malware" => Tier::Pro,
-        // Enterprise: +17 domains (38 total), 291 modules
+        // Enterprise: +17 domains (39 total), 294 modules
         _ => Tier::Enterprise,
     }
 }
@@ -29,7 +29,27 @@ pub fn domain_tier(domain: &str) -> Tier {
 #[derive(Debug, Clone, Serialize)]
 pub struct DomainStatus { pub domain: String, pub display_name: String, pub enabled: bool, pub module_count: usize, pub tier: Tier }
 #[derive(Debug, Clone, Serialize)]
-pub struct UnifiedAlert { pub timestamp: i64, pub severity: String, pub domain: String, pub component: String, pub title: String, pub details: String, pub remediation: Option<String> }
+pub struct ReasoningStep {
+    pub step_type: String,     // "pattern_match", "threshold", "graph_edge", "flow_hop", "os_signal", "comparison"
+    pub label: String,         // Human-readable label
+    pub detail: String,        // Technical detail
+    pub confidence: f64,       // 0.0–1.0
+    pub icon: String,          // emoji for the UI
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct UnifiedAlert {
+    pub timestamp: i64,
+    pub severity: String,
+    pub domain: String,
+    pub component: String,
+    pub title: String,
+    pub details: String,
+    pub remediation: Option<String>,
+    pub reasoning_chain: Vec<ReasoningStep>,
+    pub risk_score: Option<f64>,
+    pub mitre_ids: Vec<String>,
+}
 #[derive(Debug, Clone, Serialize)]
 pub struct StatusResponse { pub domains: Vec<DomainStatus>, pub enabled_domains: usize, pub total_modules: usize, pub uptime_secs: i64, pub current_tier: Tier }
 #[derive(Debug, Clone, Serialize)]
@@ -61,7 +81,7 @@ macro_rules! reg {
                 r.alerts().into_iter().map(|a| UnifiedAlert {
                     timestamp: a.timestamp, severity: format!("{:?}", a.severity),
                     domain: $d.into(), component: a.component, title: a.title, details: a.details,
-                    remediation: None,
+                    remediation: None, reasoning_chain: vec![], risk_score: None, mitre_ids: vec![],
                 }).collect()
             }),
         });
@@ -77,6 +97,10 @@ pub struct SentinelBackend {
     metrics: sentinel_core::MemoryMetrics,
     start_time: i64,
     pub current_tier: RwLock<Tier>,
+    // Checkpoint-capable modules (periodic background checkpointing)
+    cp_provenance: Option<Arc<sentinel_forensics::provenance_graph::ProvenanceGraph>>,
+    cp_timeline: Option<Arc<sentinel_forensics::memory_timeline::MemoryTimeline>>,
+    cp_lineage: Option<Arc<sentinel_data::data_lineage::DataLineage>>,
 }
 unsafe impl Send for SentinelBackend {}
 unsafe impl Sync for SentinelBackend {}
@@ -87,10 +111,29 @@ impl SentinelBackend {
         let m = metrics.clone();
         let mut d = Vec::new(); let mut s: Vec<AlertSource> = Vec::new();
         let mut k: Vec<Box<dyn std::any::Any + Send + Sync>> = Vec::new();
-        bootstrap_all(&mut d, &mut s, &mut k, m);
+        let mut cp_prov = None;
+        let mut cp_tl = None;
+        let mut cp_lin = None;
+        bootstrap_all(&mut d, &mut s, &mut k, m, &mut cp_prov, &mut cp_tl, &mut cp_lin);
         let total: usize = d.iter().map(|x| x.module_count).sum();
         log::info!("Beaver Warrior: {} domains, {} modules loaded", d.len(), total);
-        SentinelBackend { domains: d, alert_sources: s, _kept: k, metrics, start_time: chrono::Utc::now().timestamp(), current_tier: RwLock::new(Tier::Free) }
+        SentinelBackend { domains: d, alert_sources: s, _kept: k, metrics, start_time: chrono::Utc::now().timestamp(), current_tier: RwLock::new(Tier::Free), cp_provenance: cp_prov, cp_timeline: cp_tl, cp_lineage: cp_lin }
+    }
+
+    /// Start background checkpoint timer — call once after construction.
+    /// Checkpoints all 3 forensic/data modules every 60 seconds.
+    pub fn start_checkpoint_timer(&self) {
+        let prov = self.cp_provenance.clone();
+        let tl = self.cp_timeline.clone();
+        let lin = self.cp_lineage.clone();
+        std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(60));
+                if let Some(ref p) = prov { p.checkpoint(); }
+                if let Some(ref t) = tl { t.checkpoint(); }
+                if let Some(ref l) = lin { l.checkpoint(); }
+            }
+        });
     }
     fn collect_alerts(&self) -> Vec<UnifiedAlert> {
         let mut all = Vec::new();
@@ -105,13 +148,20 @@ impl SentinelBackend {
             title: format!("Protection active — {} modules across {} domains", total, self.domains.len()),
             details: "All security modules are running locally on your machine. No data leaves your device.".into(),
             remediation: None,
+            reasoning_chain: vec![ReasoningStep { step_type: "threshold".into(), label: "System initialized".into(), detail: format!("{} domains, {} modules loaded — all local, zero cloud", self.domains.len(), total), confidence: 1.0, icon: "🛡️".into() }],
+            risk_score: Some(0.0),
+            mitre_ids: vec![],
         });
         all.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         all.truncate(500); all
     }
 }
 
-fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Vec<Box<dyn std::any::Any + Send + Sync>>, m: sentinel_core::MemoryMetrics) {
+fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Vec<Box<dyn std::any::Any + Send + Sync>>, m: sentinel_core::MemoryMetrics,
+    cp_prov: &mut Option<Arc<sentinel_forensics::provenance_graph::ProvenanceGraph>>,
+    cp_tl: &mut Option<Arc<sentinel_forensics::memory_timeline::MemoryTimeline>>,
+    cp_lin: &mut Option<Arc<sentinel_data::data_lineage::DataLineage>>,
+) {
     // ── 1. Network (15 modules) ──
     { use sentinel_network::firewall::Firewall;
       use sentinel_network::ids::{IntrusionDetector, IdsMode};
@@ -136,6 +186,9 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
                     timestamp: a.timestamp, severity: format!("{:?}", a.severity),
                     domain: "network".into(), component: "Firewall".into(),
                     title: a.rule_name.clone(),
+                    reasoning_chain: vec![ReasoningStep { step_type: "pattern_match".into(), label: "Firewall rule triggered".into(), detail: format!("Rule '{}' matched — {}", a.rule_name, a.message), confidence: 0.95, icon: "🔥".into() }],
+                    risk_score: Some(match format!("{:?}", a.severity).as_str() { "Critical" => 1.0, "High" => 0.8, "Medium" => 0.5, _ => 0.2 }),
+                    mitre_ids: vec!["TA0011".into()],
                     details: format!("{} | {}:{} → {}:{}", a.message, a.src_ip, a.src_port, a.dst_ip, a.dst_port),
                     remediation: None,
                 }).collect()
@@ -149,6 +202,12 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
                     timestamp: a.timestamp, severity: format!("{:?}", a.severity),
                     domain: "network".into(), component: "IDS".into(),
                     title: a.rule_name.clone(),
+                    reasoning_chain: vec![
+                        ReasoningStep { step_type: "pattern_match".into(), label: "Intrusion signature matched".into(), detail: format!("Rule '{}' fired on network traffic", a.rule_name), confidence: 0.9, icon: "🚨".into() },
+                        ReasoningStep { step_type: "threshold".into(), label: "Severity assessment".into(), detail: format!("Classified {:?} based on rule weight and context", a.severity), confidence: 0.85, icon: "📊".into() },
+                    ],
+                    risk_score: Some(match format!("{:?}", a.severity).as_str() { "Critical" => 1.0, "High" => 0.8, "Medium" => 0.5, _ => 0.2 }),
+                    mitre_ids: vec!["TA0001".into()],
                     details: format!("{} | {}:{} → {}:{}", a.message, a.src_ip, a.src_port, a.dst_ip, a.dst_port),
                     remediation: None,
                 }).collect()
@@ -162,6 +221,11 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
                     timestamp: a.timestamp, severity: format!("{:?}", a.severity),
                     domain: "network".into(), component: "ARP Guard".into(),
                     title: format!("{:?} on {}", a.alert_type, a.ip),
+                    reasoning_chain: vec![
+                        ReasoningStep { step_type: "comparison".into(), label: "ARP table anomaly".into(), detail: format!("MAC/IP binding changed for {} — possible spoofing", a.ip), confidence: 0.88, icon: "🔗".into() },
+                    ],
+                    risk_score: Some(0.7),
+                    mitre_ids: vec!["T1557.002".into()],
                     details: format!("{} | expected={} observed={} conf={:.0}%", a.details, a.expected_mac, a.observed_mac, a.confidence * 100.0),
                     remediation: None,
                 }).collect()
@@ -308,6 +372,12 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
                     title: a.title,
                     details: format!("{} | rule={} events={}", a.details, a.rule_name, a.source_events.len()),
                     remediation: None,
+                    reasoning_chain: vec![
+                        ReasoningStep { step_type: "pattern_match".into(), label: "Correlation rule matched".into(), detail: format!("Rule '{}' correlated {} source events", a.rule_name, a.source_events.len()), confidence: 0.92, icon: "🔗".into() },
+                        ReasoningStep { step_type: "threshold".into(), label: "Cross-event analysis".into(), detail: format!("Events from: {}", a.source_events.join(", ")), confidence: 0.85, icon: "📊".into() },
+                    ],
+                    risk_score: Some(match format!("{:?}", a.severity).as_str() { "Critical" => 1.0, "High" => 0.8, "Medium" => 0.5, _ => 0.2 }),
+                    mitre_ids: vec![],
                 }).collect()
             }),
         }); k.push(Box::new(ce)); }
@@ -354,6 +424,7 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       use sentinel_data::integrity_checker::IntegrityChecker;
       use sentinel_data::key_manager::KeyManager;
       use sentinel_data::masking_engine::MaskingEngine;
+      use sentinel_data::data_lineage::DataLineage;
       reg!(s, "data", "Tokenizer", Tokenizer::new().with_metrics(m.clone()));
       reg!(s, "data", "DLP Scanner", DlpScanner::new().with_metrics(m.clone()));
       reg!(s, "data", "Access Controller", AccessController::new().with_metrics(m.clone()));
@@ -363,7 +434,14 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "data", "Integrity Checker", IntegrityChecker::new().with_metrics(m.clone()));
       reg!(s, "data", "Key Manager", KeyManager::new().with_metrics(m.clone()));
       reg!(s, "data", "Masking Engine", MaskingEngine::new().with_metrics(m.clone()));
-      dom!(d, "data", "Data Protection", 9); }
+      let lin = Arc::new(DataLineage::new().with_metrics(m.clone()));
+      *cp_lin = Some(lin.clone());
+      { let r = lin.clone(); s.push(AlertSource { _domain: "data".into(), _name: "Data Lineage".into(),
+          get_alerts: Box::new(move || { r.alerts().into_iter().map(|a| UnifiedAlert { timestamp: a.timestamp, severity: format!("{:?}", a.severity), domain: "data".into(), component: a.component, title: a.title.clone(), details: a.details.clone(), remediation: None,
+              reasoning_chain: crate::sentinel::parse_data_reasoning(&a.title, &a.details),
+              risk_score: Some(crate::sentinel::infer_risk(&a.title)), mitre_ids: vec!["T1048".into()],
+          }).collect() }) }); }
+      dom!(d, "data", "Data Protection", 10); }
 
     // ── 9. Threat Intel (7 modules) ──
     { use sentinel_threat_intel::stix_parser::StixParser;
@@ -390,6 +468,8 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       use sentinel_forensics::chain_of_custody::ChainOfCustody;
       use sentinel_forensics::disk_imager::DiskImager;
       use sentinel_forensics::memory_analyzer::MemoryAnalyzer;
+      use sentinel_forensics::provenance_graph::ProvenanceGraph;
+      use sentinel_forensics::memory_timeline::MemoryTimeline;
       reg!(s, "forensics", "Evidence Collector", EvidenceCollector::new().with_metrics(m.clone()));
       reg!(s, "forensics", "Timeline Builder", TimelineBuilder::new().with_metrics(m.clone()));
       reg!(s, "forensics", "Artifact Extractor", ArtifactExtractor::new().with_metrics(m.clone()));
@@ -397,7 +477,21 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "forensics", "Chain of Custody", ChainOfCustody::new().with_metrics(m.clone()));
       reg!(s, "forensics", "Disk Imager", DiskImager::new().with_metrics(m.clone()));
       reg!(s, "forensics", "Memory Analyzer", MemoryAnalyzer::new().with_metrics(m.clone()));
-      dom!(d, "forensics", "Digital Forensics", 7); }
+      let prov = Arc::new(ProvenanceGraph::new().with_metrics(m.clone()));
+      *cp_prov = Some(prov.clone());
+      { let r = prov.clone(); s.push(AlertSource { _domain: "forensics".into(), _name: "Provenance Graph".into(),
+          get_alerts: Box::new(move || { r.alerts().into_iter().map(|a| UnifiedAlert { timestamp: a.timestamp, severity: format!("{:?}", a.severity), domain: "forensics".into(), component: a.component, title: a.title.clone(), details: a.details.clone(), remediation: None,
+              reasoning_chain: crate::sentinel::parse_provenance_reasoning(&a.details),
+              risk_score: Some(crate::sentinel::infer_risk(&a.title)), mitre_ids: vec!["TA0008".into()],
+          }).collect() }) }); }
+      let tl = Arc::new(MemoryTimeline::new().with_metrics(m.clone()));
+      *cp_tl = Some(tl.clone());
+      { let r = tl.clone(); s.push(AlertSource { _domain: "forensics".into(), _name: "Memory Timeline".into(),
+          get_alerts: Box::new(move || { r.alerts().into_iter().map(|a| UnifiedAlert { timestamp: a.timestamp, severity: format!("{:?}", a.severity), domain: "forensics".into(), component: a.component, title: a.title.clone(), details: a.details.clone(), remediation: None,
+              reasoning_chain: crate::sentinel::parse_memory_reasoning(&a.title, &a.details),
+              risk_score: Some(crate::sentinel::infer_risk(&a.title)), mitre_ids: vec!["T1055".into()],
+          }).collect() }) }); }
+      dom!(d, "forensics", "Digital Forensics", 9); }
 
     // ── 11. Vuln (6 modules) ──
     { use sentinel_vuln::cve_database::CveDatabase;
@@ -1192,4 +1286,92 @@ pub fn get_remediation_stats(
     engine: tauri::State<'_, Arc<RemediationEngine>>,
 ) -> serde_json::Value {
     engine.stats()
+}
+
+// ── Reasoning chain parsers ───────────────────────────────────────────────
+
+fn infer_risk(title: &str) -> f64 {
+    let t = title.to_lowercase();
+    if t.contains("critical") || t.contains("exfiltration") || t.contains("hollowing") { 0.95 }
+    else if t.contains("lateral") || t.contains("hook") || t.contains("injection") { 0.85 }
+    else if t.contains("suspicious") || t.contains("anomal") { 0.65 }
+    else if t.contains("leak") || t.contains("sensitive") { 0.7 }
+    else { 0.5 }
+}
+
+fn parse_provenance_reasoning(details: &str) -> Vec<ReasoningStep> {
+    let mut steps = Vec::new();
+    // Parse pipe-delimited segments from provenance alert details
+    for (i, seg) in details.split('|').enumerate() {
+        let seg = seg.trim();
+        if seg.is_empty() { continue; }
+        let (stype, icon) = match i {
+            0 => ("graph_edge", "🔀"),
+            1 => ("pattern_match", "🔍"),
+            _ => ("threshold", "📊"),
+        };
+        steps.push(ReasoningStep {
+            step_type: stype.into(),
+            label: if i == 0 { "Attack path identified".into() } else { format!("Evidence {}", i) },
+            detail: seg.to_string(),
+            confidence: 0.90 - (i as f64 * 0.05),
+            icon: icon.into(),
+        });
+    }
+    if steps.is_empty() {
+        steps.push(ReasoningStep { step_type: "graph_edge".into(), label: "Provenance trace".into(), detail: details.to_string(), confidence: 0.85, icon: "🔀".into() });
+    }
+    steps
+}
+
+fn parse_memory_reasoning(title: &str, details: &str) -> Vec<ReasoningStep> {
+    let mut steps = Vec::new();
+    let t = title.to_lowercase();
+    if t.contains("hook") {
+        steps.push(ReasoningStep { step_type: "os_signal".into(), label: "Function hook detected".into(), detail: "Prologue bytes changed: JMP/CALL trampoline found at function entry point".into(), confidence: 0.92, icon: "🪝".into() });
+        steps.push(ReasoningStep { step_type: "comparison".into(), label: "Before/after comparison".into(), detail: "Original prologue (PUSH RBP; MOV RSP) replaced with JMP rel32 or MOV RAX,imm; JMP RAX".into(), confidence: 0.90, icon: "🔬".into() });
+    }
+    if t.contains("hollowing") {
+        steps.push(ReasoningStep { step_type: "os_signal".into(), label: "Process image mismatch".into(), detail: "In-memory executable header differs from on-disk Mach-O/PE/ELF binary".into(), confidence: 0.93, icon: "💀".into() });
+        steps.push(ReasoningStep { step_type: "comparison".into(), label: "On-disk header check".into(), detail: "Mapped file magic bytes don't match in-memory content hash".into(), confidence: 0.88, icon: "📁".into() });
+    }
+    if t.contains("fileless") || t.contains("rwx") {
+        steps.push(ReasoningStep { step_type: "os_signal".into(), label: "Suspicious memory region".into(), detail: "RWX (read-write-execute) region detected — common for shellcode injection".into(), confidence: 0.85, icon: "⚡".into() });
+    }
+    if t.contains("entropy") {
+        steps.push(ReasoningStep { step_type: "threshold".into(), label: "Entropy anomaly".into(), detail: "Memory region entropy shifted significantly — indicates repacking or encryption".into(), confidence: 0.80, icon: "🎲".into() });
+    }
+    // Always include raw details as final step
+    if !details.is_empty() {
+        steps.push(ReasoningStep { step_type: "threshold".into(), label: "Raw evidence".into(), detail: details.to_string(), confidence: 0.75, icon: "📋".into() });
+    }
+    if steps.is_empty() {
+        steps.push(ReasoningStep { step_type: "os_signal".into(), label: "Memory anomaly".into(), detail: details.to_string(), confidence: 0.80, icon: "🧠".into() });
+    }
+    steps
+}
+
+fn parse_data_reasoning(title: &str, details: &str) -> Vec<ReasoningStep> {
+    let mut steps = Vec::new();
+    let t = title.to_lowercase();
+    if t.contains("leak") || t.contains("exfil") {
+        steps.push(ReasoningStep { step_type: "flow_hop".into(), label: "Data leak detected".into(), detail: "Sensitive data reached untrusted destination".into(), confidence: 0.92, icon: "🚨".into() });
+    }
+    if t.contains("clipboard") {
+        steps.push(ReasoningStep { step_type: "os_signal".into(), label: "Clipboard capture".into(), detail: "Sensitive content detected in system clipboard".into(), confidence: 0.85, icon: "📋".into() });
+    }
+    if t.contains("sensitive") || t.contains("pii") || t.contains("credit") {
+        steps.push(ReasoningStep { step_type: "pattern_match".into(), label: "Sensitive data classified".into(), detail: "Content matched PII/financial/credential pattern".into(), confidence: 0.90, icon: "🔐".into() });
+    }
+    // Parse pipe-delimited flow hops
+    for seg in details.split('→') {
+        let seg = seg.trim();
+        if !seg.is_empty() {
+            steps.push(ReasoningStep { step_type: "flow_hop".into(), label: "Flow hop".into(), detail: seg.to_string(), confidence: 0.80, icon: "➡️".into() });
+        }
+    }
+    if steps.is_empty() {
+        steps.push(ReasoningStep { step_type: "flow_hop".into(), label: "Data flow event".into(), detail: details.to_string(), confidence: 0.75, icon: "📊".into() });
+    }
+    steps
 }

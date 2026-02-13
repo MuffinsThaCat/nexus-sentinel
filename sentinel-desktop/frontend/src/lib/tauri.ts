@@ -24,6 +24,14 @@ export interface TierInfo {
   tiers: TierDetail[];
 }
 
+export interface ReasoningStep {
+  step_type: string;     // "pattern_match", "threshold", "graph_edge", "flow_hop", "os_signal", "comparison"
+  label: string;
+  detail: string;
+  confidence: number;    // 0.0–1.0
+  icon: string;
+}
+
 export interface UnifiedAlert {
   timestamp: number;
   severity: string;
@@ -32,6 +40,9 @@ export interface UnifiedAlert {
   title: string;
   details: string;
   remediation?: string;
+  reasoning_chain: ReasoningStep[];
+  risk_score: number | null;
+  mitre_ids: string[];
 }
 
 export interface StatusResponse {

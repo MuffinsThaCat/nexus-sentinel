@@ -10,6 +10,7 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let backend = Arc::new(sentinel::SentinelBackend::new());
+    backend.start_checkpoint_timer();
     let user_store = Arc::new(auth::UserStore::new());
     let plan_engine = Arc::new(sentinel_ai::plan_review_engine::PlanReviewEngine::new());
     let ria = Arc::new(sentinel_ai::response_integrity_analyzer::ResponseIntegrityAnalyzer::new());

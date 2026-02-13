@@ -6,3 +6,5 @@ pub mod timeline_builder;
 pub mod artifact_extractor;
 pub mod chain_of_custody;
 pub mod report_writer;
+pub mod provenance_graph;
+pub mod memory_timeline;

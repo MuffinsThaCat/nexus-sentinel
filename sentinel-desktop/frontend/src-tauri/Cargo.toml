@@ -1,6 +1,6 @@
 [package]
 name = "beaver-warrior-desktop"
-version = "0.5.1"
+version = "0.5.2"
 description = "Beaver Warrior — Comprehensive Local Security Suite"
 authors = ["Tal Zisckind"]
 license = "MIT"

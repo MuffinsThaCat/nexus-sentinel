@@ -597,10 +597,10 @@ const plans = [
     name: "Pro",
     price: "$29",
     period: "/user/mo",
-    description: "22 security domains, 202 modules",
+    description: "22 security domains, 203 modules",
     features: [
       "Everything in Free + Identity, SIEM, Cloud, Container, Supply Chain, Data, API, Web, Malware & more",
-      "202 security modules",
+      "203 security modules",
       "Real-time malware detection & scanning",
       "AI-powered remediation advice for every alert",
       "50 endpoints",
@@ -617,10 +617,10 @@ const plans = [
     name: "Enterprise",
     price: "$99",
     period: "/user/mo",
-    description: "All 38 security domains, 291 modules",
+    description: "All 39 security domains, 294 modules",
     features: [
       "Everything in Pro + Threat Intel, Forensics, IoT, Dark Web, OT/ICS, Deception & more",
-      "291 security modules across 38 domains",
+      "294 security modules across 39 domains",
       "Unlimited endpoints & retention",
       "Auto-remediation",
       "Custom compliance & API access",
@@ -749,7 +749,7 @@ function CTA() {
             ?
           </h2>
           <p className="text-slate-400 text-lg" style={{maxWidth:'36rem',margin:'0 auto 2.5rem auto'}}>
-            The most comprehensive local security suite ever built — 38 security domains, 55 AI agent defense modules, all scanning runs on your machine. Your data, your rules.
+            The most comprehensive local security suite ever built — 39 security domains, 55 AI agent defense modules, all scanning runs on your machine. Your data, your rules.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <div className="relative group">

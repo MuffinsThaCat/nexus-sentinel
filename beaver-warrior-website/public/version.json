@@ -1,5 +1,5 @@
 {
-  "version": "0.5.1",
+  "version": "0.5.2",
   "download_url": "https://beaverwarrior.com/BeaverWarrior-macOS.zip",
-  "release_notes": "v0.5.1 — Startup protection alert, updated Pro tier (11 domains, 69 modules), update system fix."
+  "release_notes": "v0.5.2 — Reasoning chain drill-down, rich alert details with confidence scores & MITRE tags, 39 domains / 294 modules."
 }

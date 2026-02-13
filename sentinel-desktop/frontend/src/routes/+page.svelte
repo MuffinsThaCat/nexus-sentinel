@@ -372,7 +372,7 @@
 								<div class="flex items-center gap-4">
 									<div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-lg">🚀</div>
 									<div>
-										<h3 class="text-[14px] font-bold text-white/90">Unlock 11 more domains & 69 more modules</h3>
+										<h3 class="text-[14px] font-bold text-white/90">Unlock 11 more domains & 70 more modules</h3>
 										<p class="text-[12px] text-white/40 mt-0.5">Upgrade to Pro for SIEM, Cloud, Identity, Malware, Supply Chain & more — $29/user/mo</p>
 									</div>
 								</div>
@@ -393,7 +393,7 @@
 						<div class="glass glow-accent p-5 flex flex-col gap-1.5">
 							<span class="text-[11px] font-medium text-white/40 uppercase tracking-wider">Active Domains</span>
 							<span class="text-3xl font-bold text-white count-up tabular-nums">{status.enabled_domains}</span>
-							<span class="text-[11px] text-cyan-400/60">of 38 security layers</span>
+							<span class="text-[11px] text-cyan-400/60">of 39 security layers</span>
 						</div>
 						<!-- Total Modules -->
 						<div class="glass p-5 flex flex-col gap-1.5">
@@ -659,128 +659,228 @@
 								{@const isExpanded = expandedAlert === i}
 								{@const rem = remediationCache.get(key)}
 								{@const isLoading = remediationLoading === key}
-								<div class="glass-bright animate-in {isExpanded ? 'ring-1 ring-cyan-500/20' : ''}" style="animation-delay:{i * 30}ms">
-									<div class="p-4 flex items-start gap-4">
+								{@const hasChain = alert.reasoning_chain && alert.reasoning_chain.length > 0}
+								{@const riskPct = (alert.risk_score ?? 0) * 100}
+								{@const riskColor = riskPct >= 80 ? 'red' : riskPct >= 50 ? 'amber' : riskPct >= 20 ? 'cyan' : 'emerald'}
+								<div class="glass-bright animate-in transition-all duration-300 {isExpanded ? 'ring-1 ring-cyan-500/20 shadow-lg shadow-cyan-500/5' : 'hover:border-white/[0.08]'}" style="animation-delay:{i * 30}ms">
+									<!-- Alert Header — clickable to expand -->
+									<button
+										class="w-full p-4 flex items-start gap-4 text-left cursor-pointer"
+										onclick={() => expandedAlert = isExpanded ? null : i}
+									>
 										<span class="badge {severityClass(alert.severity)} mt-0.5 flex-shrink-0">{alert.severity}</span>
 										<div class="flex-1 min-w-0">
 											<div class="flex items-center gap-2 mb-1">
 												<span class="text-[13px] font-medium text-white/80">{alert.title}</span>
+												{#if hasChain}
+													<span class="flex items-center gap-1 px-1.5 py-px rounded-full text-[8px] font-bold uppercase border bg-cyan-500/8 text-cyan-400/60 border-cyan-500/15">
+														<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+														{alert.reasoning_chain.length} steps
+													</span>
+												{/if}
 											</div>
-											<p class="text-[12px] text-white/40 leading-relaxed">{alert.details}</p>
+											<p class="text-[12px] text-white/40 leading-relaxed line-clamp-2">{alert.details}</p>
 											<div class="flex items-center gap-3 mt-1.5">
 												<span class="text-[10px] text-white/25 font-mono">{alert.domain}</span>
 												<span class="text-[10px] text-white/25 font-mono">{alert.component}</span>
-												<button
-													onclick={() => requestRemediation(alert, i)}
-													class="ml-auto flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-all
-														{isExpanded
-															? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-															: 'bg-white/[0.04] text-white/40 border border-white/[0.06] hover:bg-cyan-500/10 hover:text-cyan-400 hover:border-cyan-500/20'}"
-												>
-													{#if isLoading}
-														<svg class="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-													{:else}
-														<svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-													{/if}
-													{isExpanded ? 'Hide Fix' : 'Get Fix'}
-												</button>
+												{#if alert.mitre_ids && alert.mitre_ids.length > 0}
+													{#each alert.mitre_ids as mid}
+														<span class="px-1.5 py-px rounded text-[8px] font-bold font-mono bg-red-500/8 text-red-400/50 border border-red-500/15">{mid}</span>
+													{/each}
+												{/if}
+												{#if alert.risk_score != null}
+													<div class="ml-auto flex items-center gap-1.5">
+														<div class="w-16 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+															<div class="h-full rounded-full transition-all duration-700 ease-out
+																{riskColor === 'red' ? 'bg-red-500' : riskColor === 'amber' ? 'bg-amber-500' : riskColor === 'cyan' ? 'bg-cyan-500' : 'bg-emerald-500'}"
+																style="width: {riskPct}%"
+															></div>
+														</div>
+														<span class="text-[9px] font-bold font-mono tabular-nums
+															{riskColor === 'red' ? 'text-red-400/70' : riskColor === 'amber' ? 'text-amber-400/70' : riskColor === 'cyan' ? 'text-cyan-400/70' : 'text-emerald-400/70'}">{riskPct.toFixed(0)}%</span>
+													</div>
+												{/if}
 											</div>
 										</div>
-										<span class="text-[11px] text-white/20 font-mono flex-shrink-0 tabular-nums">{timeAgo(alert.timestamp)}</span>
-									</div>
+										<div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+											<span class="text-[11px] text-white/20 font-mono tabular-nums">{timeAgo(alert.timestamp)}</span>
+											<svg viewBox="0 0 24 24" class="w-4 h-4 text-white/15 transition-transform duration-300 {isExpanded ? 'rotate-180' : ''}" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+										</div>
+									</button>
 
-									{#if isExpanded && rem}
-										<div class="remediation-panel px-4 pb-4 pt-1">
-											{#if rem.gated}
-												<div class="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 via-surface-900/60 to-purple-950/30 p-5">
-													<div class="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.03] via-transparent to-purple-500/[0.03] upgrade-shimmer"></div>
-													<div class="relative flex items-center gap-4">
-														<div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-400/20 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/10">
-															<svg viewBox="0 0 24 24" class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" /></svg>
+									<!-- ═══ EXPANDED: Reasoning Chain + Remediation ═══ -->
+									{#if isExpanded}
+										<div class="reasoning-panel border-t border-white/[0.04]">
+
+											<!-- ── Reasoning Chain ── -->
+											{#if hasChain}
+												<div class="px-4 pt-3 pb-2">
+													<div class="flex items-center gap-2 mb-3">
+														<div class="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center">
+															<svg viewBox="0 0 24 24" class="w-3 h-3 text-violet-400" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
 														</div>
-														<div class="flex-1 min-w-0">
-															<p class="text-[13px] font-semibold text-indigo-300/90 mb-0.5">AI-Powered Remediation</p>
-															<p class="text-[11px] text-white/40 leading-relaxed">{rem.message}</p>
-														</div>
-														<button onclick={() => handlePayment('Pro')} class="px-4 py-2 rounded-xl text-[12px] font-semibold bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-300 border border-indigo-400/25 hover:from-indigo-500/35 hover:to-purple-500/35 hover:border-indigo-400/40 hover:shadow-lg hover:shadow-indigo-500/10 transition-all duration-300 flex-shrink-0">
-															Upgrade to Pro
-														</button>
-													</div>
-												</div>
-											{:else}
-												{@const steps = parseSteps(rem.advice ?? '')}
-												<div class="rounded-xl border border-cyan-500/10 bg-gradient-to-b from-cyan-950/20 to-transparent overflow-hidden">
-													<div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
-														<div class="w-5 h-5 rounded-md bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
-															<svg viewBox="0 0 24 24" class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" /></svg>
-														</div>
-														<span class="text-[11px] font-semibold text-cyan-400/80 uppercase tracking-wider">Remediation Plan</span>
+														<span class="text-[11px] font-semibold text-violet-400/80 uppercase tracking-wider">Decision Reasoning</span>
 														<span class="text-[10px] text-white/15 font-mono">&middot;</span>
-														<span class="text-[10px] text-white/20 font-mono">{steps.length} step{steps.length !== 1 ? 's' : ''}</span>
-														<div class="flex-1"></div>
-														{#if rem.cached}<span class="text-[9px] text-white/20 font-mono px-1.5 py-0.5 rounded bg-white/[0.03]">cached</span>{/if}
-														<div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03]">
-															<div class="w-1 h-1 rounded-full {(rem.model ?? '').includes('heuristic') ? 'bg-amber-400/60' : 'bg-cyan-400/60'}"></div>
-															<span class="text-[9px] text-white/25 font-mono">{(rem.model ?? '').includes('heuristic') ? 'built-in' : 'AI'}</span>
-														</div>
-														<button onclick={() => copyAdvice(key, rem.advice ?? '')} class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-all {copiedKey === key ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06]'}">
-															{#if copiedKey === key}
-																<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
-																Copied
-															{:else}
-																<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-																Copy
-															{/if}
-														</button>
+														<span class="text-[10px] text-white/20 font-mono">{alert.reasoning_chain.length} evidence step{alert.reasoning_chain.length !== 1 ? 's' : ''}</span>
+														{#if alert.risk_score != null}
+															<div class="ml-auto flex items-center gap-2">
+																<span class="text-[9px] text-white/25 uppercase tracking-wider font-medium">Risk</span>
+																<div class="relative w-20 h-5 rounded-lg overflow-hidden bg-white/[0.04] border border-white/[0.06]">
+																	<div class="absolute inset-y-0 left-0 rounded-lg transition-all duration-1000 ease-out
+																		{riskColor === 'red' ? 'bg-gradient-to-r from-red-500/40 to-red-500/20' : riskColor === 'amber' ? 'bg-gradient-to-r from-amber-500/40 to-amber-500/20' : riskColor === 'cyan' ? 'bg-gradient-to-r from-cyan-500/40 to-cyan-500/20' : 'bg-gradient-to-r from-emerald-500/40 to-emerald-500/20'}"
+																		style="width: {riskPct}%"
+																	></div>
+																	<span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums
+																		{riskColor === 'red' ? 'text-red-300' : riskColor === 'amber' ? 'text-amber-300' : riskColor === 'cyan' ? 'text-cyan-300' : 'text-emerald-300'}">{riskPct.toFixed(0)}%</span>
+																</div>
+															</div>
+														{/if}
 													</div>
-													<div class="p-4 space-y-0">
-														{#each steps as step, si}
-															<div class="flex gap-3 group remediation-step" style="animation-delay:{si * 60}ms">
+
+													<!-- Step-by-step reasoning chain -->
+													<div class="ml-1 space-y-0">
+														{#each alert.reasoning_chain as step, si}
+															{@const confPct = step.confidence * 100}
+															{@const confColor = confPct >= 90 ? 'emerald' : confPct >= 70 ? 'cyan' : confPct >= 50 ? 'amber' : 'red'}
+															<div class="flex gap-3 group reasoning-step" style="animation-delay:{si * 80}ms">
+																<!-- Left: icon + connecting line -->
 																<div class="flex flex-col items-center flex-shrink-0">
-																	{#if step.num}
-																		<div class="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500/15 to-blue-500/15 border border-cyan-500/20 flex items-center justify-center text-[10px] font-bold text-cyan-400/80 shadow-sm shadow-cyan-500/5 group-hover:from-cyan-500/25 group-hover:to-blue-500/25 group-hover:border-cyan-500/30 transition-all duration-200">{step.num}</div>
-																	{:else}
-																		<div class="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center"><div class="w-1.5 h-1.5 rounded-full bg-white/20"></div></div>
-																	{/if}
-																	{#if si < steps.length - 1}
-																		<div class="w-px flex-1 min-h-[12px] bg-gradient-to-b from-cyan-500/15 to-transparent my-1"></div>
+																	<div class="w-8 h-8 rounded-xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.08] flex items-center justify-center text-sm group-hover:from-violet-500/15 group-hover:to-cyan-500/10 group-hover:border-violet-500/20 transition-all duration-300 shadow-sm">
+																		{step.icon}
+																	</div>
+																	{#if si < alert.reasoning_chain.length - 1}
+																		<div class="w-px flex-1 min-h-[16px] bg-gradient-to-b from-violet-500/20 via-violet-500/10 to-transparent my-1 chain-line"></div>
 																	{/if}
 																</div>
-																<div class="flex-1 pb-3 {si < steps.length - 1 ? '' : 'pb-0'}">
-																	<p class="text-[12px] text-white/60 leading-relaxed group-hover:text-white/75 transition-colors duration-200">{step.text}</p>
+																<!-- Right: content -->
+																<div class="flex-1 pb-3.5 {si < alert.reasoning_chain.length - 1 ? '' : 'pb-1'}">
+																	<div class="flex items-center gap-2 mb-0.5">
+																		<span class="text-[12px] font-semibold text-white/70 group-hover:text-white/90 transition-colors">{step.label}</span>
+																		<span class="px-1.5 py-px rounded text-[8px] font-bold uppercase tracking-wider border
+																			{step.step_type === 'pattern_match' ? 'bg-amber-500/8 text-amber-400/50 border-amber-500/15' :
+																			 step.step_type === 'graph_edge' ? 'bg-violet-500/8 text-violet-400/50 border-violet-500/15' :
+																			 step.step_type === 'flow_hop' ? 'bg-blue-500/8 text-blue-400/50 border-blue-500/15' :
+																			 step.step_type === 'os_signal' ? 'bg-pink-500/8 text-pink-400/50 border-pink-500/15' :
+																			 step.step_type === 'comparison' ? 'bg-teal-500/8 text-teal-400/50 border-teal-500/15' :
+																			 'bg-white/[0.04] text-white/30 border-white/[0.06]'}">{step.step_type.replace('_', ' ')}</span>
+																	</div>
+																	<p class="text-[11px] text-white/40 leading-relaxed group-hover:text-white/55 transition-colors">{step.detail}</p>
+																	<!-- Confidence bar -->
+																	<div class="flex items-center gap-2 mt-1.5">
+																		<span class="text-[8px] text-white/20 uppercase tracking-wider font-medium w-12">conf.</span>
+																		<div class="flex-1 h-1 rounded-full bg-white/[0.04] overflow-hidden max-w-[120px]">
+																			<div class="h-full rounded-full transition-all duration-700 ease-out
+																				{confColor === 'emerald' ? 'bg-emerald-500/60' : confColor === 'cyan' ? 'bg-cyan-500/60' : confColor === 'amber' ? 'bg-amber-500/60' : 'bg-red-500/60'}"
+																				style="width: {confPct}%"
+																			></div>
+																		</div>
+																		<span class="text-[9px] font-mono tabular-nums
+																			{confColor === 'emerald' ? 'text-emerald-400/50' : confColor === 'cyan' ? 'text-cyan-400/50' : confColor === 'amber' ? 'text-amber-400/50' : 'text-red-400/50'}">{confPct.toFixed(0)}%</span>
+																	</div>
 																</div>
 															</div>
 														{/each}
 													</div>
 												</div>
 											{/if}
-										</div>
-									{:else if isExpanded && isLoading}
-										<div class="remediation-panel px-4 pb-4 pt-1">
-											<div class="rounded-xl border border-cyan-500/10 bg-gradient-to-b from-cyan-950/20 to-transparent overflow-hidden">
-												<div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
-													<div class="w-5 h-5 rounded-md shimmer bg-white/[0.04]"></div>
-													<div class="h-3 w-28 rounded shimmer bg-white/[0.04]"></div>
-													<div class="flex-1"></div>
-													<div class="h-3 w-12 rounded shimmer bg-white/[0.04]"></div>
-												</div>
-												<div class="p-4 space-y-3">
-													{#each Array(4) as _, si}
-														<div class="flex gap-3 items-start" style="opacity:{1 - si * 0.15}">
-															<div class="w-6 h-6 rounded-lg shimmer bg-white/[0.04] flex-shrink-0"></div>
-															<div class="flex-1 space-y-1.5 pt-0.5">
-																<div class="h-3 rounded shimmer bg-white/[0.04]" style="width:{85 - si * 12}%"></div>
-																{#if si < 2}
-																	<div class="h-3 rounded shimmer bg-white/[0.04]" style="width:{60 - si * 15}%"></div>
-																{/if}
+
+											<!-- ── Remediation section ── -->
+											<div class="px-4 pb-3 pt-1">
+												{#if !rem && !isLoading}
+													<button
+														onclick={() => requestRemediation(alert, i)}
+														class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-semibold transition-all bg-white/[0.03] text-white/40 border border-white/[0.06] hover:bg-cyan-500/10 hover:text-cyan-400 hover:border-cyan-500/20"
+													>
+														<svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+														Get Remediation Plan
+													</button>
+												{:else if isLoading}
+													<div class="rounded-xl border border-cyan-500/10 bg-gradient-to-b from-cyan-950/20 to-transparent overflow-hidden">
+														<div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
+															<div class="w-5 h-5 rounded-md shimmer bg-white/[0.04]"></div>
+															<div class="h-3 w-28 rounded shimmer bg-white/[0.04]"></div>
+															<div class="flex-1"></div>
+															<div class="h-3 w-12 rounded shimmer bg-white/[0.04]"></div>
+														</div>
+														<div class="p-4 space-y-3">
+															{#each Array(3) as _, si}
+																<div class="flex gap-3 items-start" style="opacity:{1 - si * 0.2}">
+																	<div class="w-6 h-6 rounded-lg shimmer bg-white/[0.04] flex-shrink-0"></div>
+																	<div class="flex-1 space-y-1.5 pt-0.5">
+																		<div class="h-3 rounded shimmer bg-white/[0.04]" style="width:{85 - si * 15}%"></div>
+																	</div>
+																</div>
+															{/each}
+														</div>
+														<div class="px-4 py-2.5 border-t border-white/[0.04] flex items-center justify-center gap-2">
+															<div class="ai-pulse w-1.5 h-1.5 rounded-full bg-cyan-400/80"></div>
+															<span class="text-[11px] text-cyan-400/50 font-medium">Generating remediation plan...</span>
+														</div>
+													</div>
+												{:else if rem}
+													{#if rem.gated}
+														<div class="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 via-surface-900/60 to-purple-950/30 p-4">
+															<div class="absolute inset-0 bg-gradient-to-r from-indigo-500/[0.03] via-transparent to-purple-500/[0.03] upgrade-shimmer"></div>
+															<div class="relative flex items-center gap-4">
+																<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-400/20 flex items-center justify-center flex-shrink-0">
+																	<svg viewBox="0 0 24 24" class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" /></svg>
+																</div>
+																<div class="flex-1 min-w-0">
+																	<p class="text-[12px] font-semibold text-indigo-300/90 mb-0.5">AI-Powered Remediation</p>
+																	<p class="text-[10px] text-white/35 leading-relaxed">{rem.message}</p>
+																</div>
+																<button onclick={() => handlePayment('Pro')} class="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-300 border border-indigo-400/25 hover:from-indigo-500/35 hover:to-purple-500/35 transition-all flex-shrink-0">
+																	Upgrade
+																</button>
 															</div>
 														</div>
-													{/each}
-												</div>
-												<div class="px-4 py-2.5 border-t border-white/[0.04] flex items-center justify-center gap-2">
-													<div class="ai-pulse w-1.5 h-1.5 rounded-full bg-cyan-400/80"></div>
-													<span class="text-[11px] text-cyan-400/50 font-medium">Analyzing threat and generating remediation plan...</span>
-												</div>
+													{:else}
+														{@const steps = parseSteps(rem.advice ?? '')}
+														<div class="rounded-xl border border-cyan-500/10 bg-gradient-to-b from-cyan-950/20 to-transparent overflow-hidden">
+															<div class="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.015]">
+																<div class="w-5 h-5 rounded-md bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
+																	<svg viewBox="0 0 24 24" class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" /></svg>
+																</div>
+																<span class="text-[11px] font-semibold text-cyan-400/80 uppercase tracking-wider">Remediation Plan</span>
+																<span class="text-[10px] text-white/20 font-mono">{steps.length} step{steps.length !== 1 ? 's' : ''}</span>
+																<div class="flex-1"></div>
+																{#if rem.cached}<span class="text-[9px] text-white/20 font-mono px-1.5 py-0.5 rounded bg-white/[0.03]">cached</span>{/if}
+																<div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03]">
+																	<div class="w-1 h-1 rounded-full {(rem.model ?? '').includes('heuristic') ? 'bg-amber-400/60' : 'bg-cyan-400/60'}"></div>
+																	<span class="text-[9px] text-white/25 font-mono">{(rem.model ?? '').includes('heuristic') ? 'built-in' : 'AI'}</span>
+																</div>
+																<button onclick={() => copyAdvice(key, rem.advice ?? '')} class="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-all {copiedKey === key ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-white/[0.03] text-white/25 hover:text-white/50 hover:bg-white/[0.06]'}">
+																	{#if copiedKey === key}
+																		<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+																		Copied
+																	{:else}
+																		<svg viewBox="0 0 24 24" class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+																		Copy
+																	{/if}
+																</button>
+															</div>
+															<div class="p-4 space-y-0">
+																{#each steps as step, si}
+																	<div class="flex gap-3 group remediation-step" style="animation-delay:{si * 60}ms">
+																		<div class="flex flex-col items-center flex-shrink-0">
+																			{#if step.num}
+																				<div class="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500/15 to-blue-500/15 border border-cyan-500/20 flex items-center justify-center text-[10px] font-bold text-cyan-400/80 shadow-sm shadow-cyan-500/5 group-hover:from-cyan-500/25 group-hover:to-blue-500/25 group-hover:border-cyan-500/30 transition-all duration-200">{step.num}</div>
+																			{:else}
+																				<div class="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center"><div class="w-1.5 h-1.5 rounded-full bg-white/20"></div></div>
+																			{/if}
+																			{#if si < steps.length - 1}
+																				<div class="w-px flex-1 min-h-[12px] bg-gradient-to-b from-cyan-500/15 to-transparent my-1"></div>
+																			{/if}
+																		</div>
+																		<div class="flex-1 pb-3 {si < steps.length - 1 ? '' : 'pb-0'}">
+																			<p class="text-[12px] text-white/60 leading-relaxed group-hover:text-white/75 transition-colors duration-200">{step.text}</p>
+																		</div>
+																	</div>
+																{/each}
+															</div>
+														</div>
+													{/if}
+												{/if}
 											</div>
 										</div>
 									{/if}
@@ -943,8 +1043,8 @@
 								<span class="text-[11px] text-white/30 block mt-1">Runs on your laptop — not a server farm</span>
 							</div>
 							<div>
-								<span class="text-2xl font-bold text-amber-400">286</span>
-								<span class="text-[11px] text-white/30 block mt-1">Security modules across 38 domains</span>
+								<span class="text-2xl font-bold text-amber-400">294</span>
+								<span class="text-[11px] text-white/30 block mt-1">Security modules across 39 domains</span>
 							</div>
 						</div>
 					</div>

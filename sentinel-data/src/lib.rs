@@ -8,3 +8,4 @@ pub mod integrity_checker;
 pub mod tokenizer;
 pub mod masking_engine;
 pub mod key_manager;
+pub mod data_lineage;

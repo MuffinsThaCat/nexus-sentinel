@@ -203,3 +203,33 @@ html, body {
   background-size: 300% 100%;
   animation: upgrade-shimmer 4s ease-in-out infinite;
 }
+
+/* ═══ Reasoning Chain Animations ═══ */
+
+.reasoning-panel {
+  animation: reasoning-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reasoning-enter {
+  from { opacity: 0; max-height: 0; transform: translateY(-8px); }
+  to   { opacity: 1; max-height: 2000px; transform: translateY(0); }
+}
+
+.reasoning-step {
+  animation: reasoning-step-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reasoning-step-enter {
+  from { opacity: 0; transform: translateX(-10px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.chain-line {
+  animation: chain-line-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: inherit;
+}
+
+@keyframes chain-line-grow {
+  from { transform: scaleY(0); transform-origin: top; opacity: 0; }
+  to   { transform: scaleY(1); transform-origin: top; opacity: 1; }
+}
