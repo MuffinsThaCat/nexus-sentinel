@@ -43,6 +43,7 @@ members = [
     "sentinel-regulatory",
     "sentinel-ops",
     "sentinel-license-server",
+    "sentinel-malware",
 ]
 
 [workspace.package]
@@ -171,3 +172,4 @@ sentinel-time = { path = "sentinel-time" }
 sentinel-soceng = { path = "sentinel-soceng" }
 sentinel-regulatory = { path = "sentinel-regulatory" }
 sentinel-ops = { path = "sentinel-ops" }
+sentinel-malware = { path = "sentinel-malware" }

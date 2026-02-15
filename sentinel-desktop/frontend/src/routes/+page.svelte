@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getStatus, getAlerts, getMetrics, getTierInfo, setTier, getAuthState, authLogout, activateLicense, getPaymentUrl, updateProfile, checkForUpdate, refreshTier, getPortalUrl, domainIcons, formatUptime, formatBytes, timeAgo, tierColors, tierGradients, scanLocalAi, getRemediation } from '$lib/tauri';
+	import { getStatus, getAlerts, getMetrics, getTierInfo, setTier, getAuthState, authLogout, activateLicense, getPaymentUrl, updateProfile, checkForUpdate, refreshTier, getPortalUrl, domainIcons, formatUptime, formatBytes, timeAgo, tierColors, tierGradients, scanLocalAi, getRemediation, oneClickRemediate } from '$lib/tauri';
 	import { open } from '@tauri-apps/plugin-shell';
-	import type { StatusResponse, AlertResponse, MetricsResponse, DomainStatus, UnifiedAlert, TierInfo, Tier, AuthState, UserProfile, LicenseResult, UpdateCheck, AiScanResult, DiscoveredAiTool, RemediationResult } from '$lib/tauri';
+	import type { StatusResponse, AlertResponse, MetricsResponse, DomainStatus, UnifiedAlert, TierInfo, Tier, AuthState, UserProfile, LicenseResult, UpdateCheck, AiScanResult, DiscoveredAiTool, RemediationResult, OneClickResult } from '$lib/tauri';
 
 	let status: StatusResponse = $state({ domains: [], enabled_domains: 0, total_modules: 0, uptime_secs: 0, current_tier: 'Enterprise' });
 	let alerts: AlertResponse = $state({ alerts: [], total: 0, critical: 0, high: 0 });
@@ -26,6 +26,18 @@
 	let remediationCache: Map<string, RemediationResult> = $state(new Map());
 	let remediationLoading: string | null = $state(null);
 	let copiedKey: string | null = $state(null);
+	let fixItLoading: string | null = $state(null);
+	let fixItResults: Map<string, OneClickResult> = $state(new Map());
+
+	async function handleFixIt(alert: UnifiedAlert) {
+		const key = alertKey(alert);
+		if (fixItResults.has(key)) return;
+		fixItLoading = key;
+		const result = await oneClickRemediate(alert);
+		fixItResults.set(key, result);
+		fixItResults = new Map(fixItResults);
+		fixItLoading = null;
+	}
 
 	function alertKey(alert: UnifiedAlert): string {
 		return `${alert.component}::${alert.title}`;
@@ -372,7 +384,7 @@
 								<div class="flex items-center gap-4">
 									<div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-lg">🚀</div>
 									<div>
-										<h3 class="text-[14px] font-bold text-white/90">Unlock 11 more domains & 70 more modules</h3>
+										<h3 class="text-[14px] font-bold text-white/90">Unlock 11 more domains & 242 more modules</h3>
 										<p class="text-[12px] text-white/40 mt-0.5">Upgrade to Pro for SIEM, Cloud, Identity, Malware, Supply Chain & more — $29/user/mo</p>
 									</div>
 								</div>
@@ -878,6 +890,93 @@
 																	</div>
 																{/each}
 															</div>
+
+															<!-- Fix It Button -->
+															{#if !fixItResults.has(alertKey(alert))}
+																<div class="px-4 py-3 border-t border-white/[0.04]">
+																	<button
+																		onclick={() => handleFixIt(alert)}
+																		disabled={fixItLoading === alertKey(alert)}
+																		class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-bold transition-all {fixItLoading === alertKey(alert) ? 'bg-emerald-500/10 text-emerald-400/50 border border-emerald-500/10 cursor-wait' : 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 text-emerald-300 border border-emerald-500/25 hover:from-emerald-500/30 hover:to-cyan-500/30 hover:border-emerald-400/40 hover:shadow-lg hover:shadow-emerald-500/10'}"
+																	>
+																		{#if fixItLoading === alertKey(alert)}
+																			<div class="ai-pulse w-1.5 h-1.5 rounded-full bg-emerald-400/80"></div>
+																			Executing remediation...
+																		{:else}
+																			<svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+																			Fix It — Auto-Remediate
+																		{/if}
+																	</button>
+																</div>
+															{:else}
+																{@const fixResult = fixItResults.get(alertKey(alert))}
+																{#if fixResult}
+																<div class="px-4 py-3 border-t border-white/[0.04] space-y-2">
+																	<div class="flex items-center gap-2">
+																		<div class="w-5 h-5 rounded-md flex items-center justify-center {fixResult.report?.overall_success ? 'bg-emerald-500/20' : 'bg-amber-500/20'}">
+																			{#if fixResult.report?.overall_success}
+																				<svg viewBox="0 0 24 24" class="w-3 h-3 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+																			{:else}
+																				<svg viewBox="0 0 24 24" class="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M3.6 20h16.8a1 1 0 0 0 .87-1.5l-8.4-14.5a1 1 0 0 0-1.74 0L2.73 18.5A1 1 0 0 0 3.6 20z"/></svg>
+																			{/if}
+																		</div>
+																		<span class="text-[11px] font-semibold {fixResult.report?.overall_success ? 'text-emerald-400/80' : 'text-amber-400/80'} uppercase tracking-wider">Remediation Result</span>
+																		{#if fixResult.report}
+																			<span class="text-[9px] text-white/20 font-mono">{fixResult.report.total_duration_ms}ms</span>
+																		{/if}
+																	</div>
+																	<p class="text-[11px] text-white/50 leading-relaxed">{fixResult.summary}</p>
+																	{#if fixResult.validation}
+																		<div class="flex items-center gap-2 pt-1">
+																			<div class="flex items-center gap-1.5 px-2 py-1 rounded-lg {fixResult.validation.passed ? 'bg-emerald-500/10 border border-emerald-500/15' : 'bg-red-500/10 border border-red-500/15'}">
+																				<div class="w-1.5 h-1.5 rounded-full {fixResult.validation.passed ? 'bg-emerald-400' : 'bg-red-400'}"></div>
+																				<span class="text-[9px] font-semibold {fixResult.validation.passed ? 'text-emerald-400/80' : 'text-red-400/80'}">
+																					{fixResult.validation.passed ? 'Validated' : 'Blocked'}
+																				</span>
+																			</div>
+																			<div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.03]">
+																				<span class="text-[9px] text-white/30">Confidence</span>
+																				<span class="text-[9px] font-mono font-bold {fixResult.validation.confidence >= 0.8 ? 'text-emerald-400/70' : fixResult.validation.confidence >= 0.5 ? 'text-amber-400/70' : 'text-red-400/70'}">{Math.round(fixResult.validation.confidence * 100)}%</span>
+																			</div>
+																			{#if fixResult.validation.filtered_actions.length > 0}
+																				<span class="text-[9px] text-amber-400/50 font-mono">{fixResult.validation.filtered_actions.length} filtered</span>
+																			{/if}
+																		</div>
+																		{#if fixResult.validation.findings.some(f => f.severity !== 'Info')}
+																			<div class="space-y-0.5 pt-0.5">
+																				{#each fixResult.validation.findings.filter(f => f.severity !== 'Info') as finding}
+																					<div class="flex items-start gap-1.5 text-[9px]">
+																						<div class="w-1 h-1 rounded-full mt-1 flex-shrink-0 {finding.severity === 'Critical' ? 'bg-red-400' : 'bg-amber-400'}"></div>
+																						<span class="{finding.severity === 'Critical' ? 'text-red-400/60' : 'text-amber-400/50'}">{finding.message}</span>
+																					</div>
+																				{/each}
+																			</div>
+																		{/if}
+																	{/if}
+																	{#if fixResult.parsed_actions.length > 0}
+																		<div class="flex flex-wrap gap-1.5 pt-1">
+																			{#each fixResult.parsed_actions as action}
+																				<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400/70 border border-emerald-500/15">{action}</span>
+																			{/each}
+																		</div>
+																	{/if}
+																	{#if fixResult.report}
+																		<div class="space-y-1 pt-1">
+																			{#each fixResult.report.actions_taken as act}
+																				<div class="flex items-center gap-2 text-[10px]">
+																					<div class="w-1.5 h-1.5 rounded-full {act.status === 'Completed' ? 'bg-emerald-400' : act.status === 'Skipped' ? 'bg-amber-400' : act.status === 'DryRun' ? 'bg-blue-400' : 'bg-red-400'}"></div>
+																					<span class="text-white/40 font-mono">{act.action_type}</span>
+																					<span class="text-white/25">{act.status}</span>
+																					{#if act.result?.message}
+																						<span class="text-white/20 truncate">{act.result.message}</span>
+																					{/if}
+																				</div>
+																			{/each}
+																		</div>
+																	{/if}
+																</div>
+																{/if}
+															{/if}
 														</div>
 													{/if}
 												{/if}
@@ -1043,7 +1142,7 @@
 								<span class="text-[11px] text-white/30 block mt-1">Runs on your laptop — not a server farm</span>
 							</div>
 							<div>
-								<span class="text-2xl font-bold text-amber-400">294</span>
+								<span class="text-2xl font-bold text-amber-400">466</span>
 								<span class="text-[11px] text-white/30 block mt-1">Security modules across 39 domains</span>
 							</div>
 						</div>

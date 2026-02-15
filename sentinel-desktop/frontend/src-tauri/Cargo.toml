@@ -1,6 +1,6 @@
 [package]
 name = "beaver-warrior-desktop"
-version = "0.5.2"
+version = "0.6.0"
 description = "Beaver Warrior — Comprehensive Local Security Suite"
 authors = ["Tal Zisckind"]
 license = "MIT"
@@ -74,4 +74,5 @@ sentinel-time = { path = "../../../sentinel-time" }
 sentinel-soceng = { path = "../../../sentinel-soceng" }
 sentinel-regulatory = { path = "../../../sentinel-regulatory" }
 sentinel-ops = { path = "../../../sentinel-ops" }
+sentinel-malware = { path = "../../../sentinel-malware" }
 tauri-plugin-shell = "2"

@@ -1,5 +1,5 @@
 {
-  "version": "0.5.2",
+  "version": "0.6.0",
   "download_url": "https://beaverwarrior.com/BeaverWarrior-macOS.zip",
-  "release_notes": "v0.5.2 — Reasoning chain drill-down, rich alert details with confidence scores & MITRE tags, 39 domains / 294 modules."
+  "release_notes": "v0.6.0 — 273 modules across 38 domains with universal one-click Fix It for all alert types. Claude-powered remediation now covers every security domain."
 }

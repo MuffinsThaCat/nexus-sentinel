@@ -13,15 +13,15 @@ impl Tier {
 
 pub fn domain_tier(domain: &str) -> Tier {
     match domain {
-        // Free: 11 domains, 133 modules (includes 55-module AI Agent Security) ✓
+        // Free: 11 domains, 133 modules (includes 55-module AI Agent Security)
         "network" | "endpoint" | "dns" | "email" | "browser"
         | "phishing" | "privacy" | "selfprotect" | "vpn" | "vuln"
         | "ai" => Tier::Free,
-        // Pro: +11 domains (22 total), 203 modules
+        // Pro: +11 domains (22 total), 375 modules (includes 174-module Malware Scanner)
         "identity" | "siem" | "cloud" | "container" | "supply_chain"
         | "data" | "api" | "web" | "exfiltration" | "mgmt"
         | "malware" => Tier::Pro,
-        // Enterprise: +17 domains (39 total), 294 modules
+        // Enterprise: +17 domains (39 total), 466 modules
         _ => Tier::Enterprise,
     }
 }
@@ -273,12 +273,42 @@ fn bootstrap_all(d: &mut Vec<DomainStatus>, s: &mut Vec<AlertSource>, k: &mut Ve
       reg!(s, "endpoint", "App Control", AppControl::new(sentinel_endpoint::app_control::PolicyMode::Allowlist).with_metrics(m.clone()));
       dom!(d, "endpoint", "Endpoint Protection", 12); }
 
-    // ── 2b. Malware Scanner + Download Guard — Pro (2 modules, 22 internal engines) ──
+    // ── 2b. Malware — Pro (174 modules: 172 sentinel-malware engines + 2 sentinel-endpoint) ──
     { use sentinel_endpoint::malware_scanner::MalwareScanner;
       use sentinel_endpoint::download_guard::DownloadGuard;
+      use sentinel_malware::real_time_file_monitor::RealTimeFileMonitor;
+      use sentinel_malware::signature_engine::SignatureEngine;
+      use sentinel_malware::heuristic_engine::HeuristicEngine;
+      use sentinel_malware::ransomware_shield::RansomwareShield;
+      use sentinel_malware::rootkit_detector::RootkitDetector;
+      use sentinel_malware::quarantine_vault::QuarantineVault;
+      use sentinel_malware::full_system_scanner::FullSystemScanner;
+      use sentinel_malware::quick_scanner::QuickScanner;
+      use sentinel_malware::scheduled_scanner::ScheduledScanner;
+      use sentinel_malware::archive_scanner::ArchiveScanner;
+      use sentinel_malware::script_engine::ScriptEngine;
+      use sentinel_malware::pup_detector::PupDetector;
+      use sentinel_malware::cloud_reputation::CloudReputation;
+      use sentinel_malware::exploit_mitigation::ExploitMitigation;
+      use sentinel_malware::launch_guard::LaunchGuard;
       noa!(k, MalwareScanner::new());
       reg!(s, "malware", "Download Guard", DownloadGuard::new());
-      dom!(d, "malware", "Malware Scanner", 2); }
+      noa!(k, RealTimeFileMonitor::new());
+      noa!(k, SignatureEngine::new());
+      noa!(k, HeuristicEngine::new());
+      noa!(k, RansomwareShield::new());
+      noa!(k, RootkitDetector::new());
+      noa!(k, QuarantineVault::new());
+      noa!(k, FullSystemScanner::new());
+      noa!(k, QuickScanner::new());
+      noa!(k, ScheduledScanner::new());
+      noa!(k, ArchiveScanner::new());
+      noa!(k, ScriptEngine::new());
+      noa!(k, PupDetector::new());
+      noa!(k, CloudReputation::new());
+      noa!(k, ExploitMitigation::new());
+      noa!(k, LaunchGuard::new());
+      dom!(d, "malware", "Malware Scanner", 174); }
 
     // ── 3. DNS (10 modules) ──
     { use sentinel_dns::dns_filter::DnsFilter;
@@ -1286,6 +1316,97 @@ pub fn get_remediation_stats(
     engine: tauri::State<'_, Arc<RemediationEngine>>,
 ) -> serde_json::Value {
     engine.stats()
+}
+
+// ── One-Click Remediation (Fix It button) ─────────────────────────────────
+
+use sentinel_malware::auto_remediator::AutoRemediator;
+use sentinel_malware::unified_alert_orchestrator::UnifiedAlertOrchestrator;
+use sentinel_malware::types::MalwareAlert;
+use sentinel_malware::types::Severity as MalwareSeverity;
+
+/// Parse a severity string (e.g. "High", "Critical") into a MalwareSeverity.
+fn parse_severity(s: &str) -> MalwareSeverity {
+    match s.to_lowercase().as_str() {
+        "critical" => MalwareSeverity::Critical,
+        "high"     => MalwareSeverity::High,
+        "medium"   => MalwareSeverity::Medium,
+        "low"      => MalwareSeverity::Low,
+        _          => MalwareSeverity::Info,
+    }
+}
+
+/// Convert a UnifiedAlert-shaped JSON object into a MalwareAlert shim so it can
+/// flow through the same Claude → validate → auto-remediate pipeline.
+fn unified_alert_to_malware_shim(v: &serde_json::Value) -> Option<MalwareAlert> {
+    let title = v.get("title")?.as_str()?;
+    let details = v.get("details")?.as_str().unwrap_or("");
+    let component = v.get("component")?.as_str().unwrap_or("unknown");
+    let domain = v.get("domain").and_then(|d| d.as_str()).unwrap_or("unknown");
+    let severity_str = v.get("severity").and_then(|s| s.as_str()).unwrap_or("Medium");
+    let timestamp = v.get("timestamp").and_then(|t| t.as_i64()).unwrap_or_else(|| {
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs() as i64
+    });
+
+    Some(MalwareAlert {
+        id: format!("{}-{}-{}", domain, component, timestamp),
+        timestamp,
+        severity: parse_severity(severity_str),
+        module: format!("{}::{}", domain, component),
+        title: title.to_string(),
+        details: details.to_string(),
+        path: None,
+        process_name: None,
+        process_pid: None,
+        verdict: None,
+        mitre_ids: vec![],
+        remediation: vec![],
+        confidence: 0.7,
+    })
+}
+
+#[tauri::command]
+pub async fn one_click_remediate(
+    backend: tauri::State<'_, Arc<SentinelBackend>>,
+    user_store: tauri::State<'_, Arc<crate::auth::UserStore>>,
+    engine: tauri::State<'_, Arc<RemediationEngine>>,
+    orchestrator: tauri::State<'_, Arc<UnifiedAlertOrchestrator>>,
+    remediator: tauri::State<'_, Arc<AutoRemediator>>,
+    alert_json: String,
+) -> Result<serde_json::Value, String> {
+    // Pro tier required
+    let tier = *backend.current_tier.read();
+    if tier < Tier::Pro {
+        return Ok(serde_json::json!({
+            "gated": true,
+            "message": "One-click remediation is a Pro feature. Upgrade to automatically fix threats with one click.",
+            "required_tier": "Pro",
+        }));
+    }
+
+    let auth_state = user_store.get_auth_state();
+    let email = match auth_state.user {
+        Some(ref u) => u.email.clone(),
+        None => return Err("Not authenticated".into()),
+    };
+
+    // Try MalwareAlert first (malware domain alerts); fall back to UnifiedAlert shim
+    // so all 273 modules across 38 domains get one-click fix.
+    let alert: MalwareAlert = match serde_json::from_str(&alert_json) {
+        Ok(a) => a,
+        Err(_) => {
+            let v: serde_json::Value = serde_json::from_str(&alert_json)
+                .map_err(|e| format!("Invalid alert JSON: {}", e))?;
+            unified_alert_to_malware_shim(&v)
+                .ok_or_else(|| "Alert missing required fields (title, component)".to_string())?
+        }
+    };
+
+    let result = orchestrator.one_click_remediate(
+        &alert, &engine, &remediator, &email,
+    ).await;
+
+    Ok(serde_json::to_value(&result).unwrap_or_default())
 }
 
 // ── Reasoning chain parsers ───────────────────────────────────────────────

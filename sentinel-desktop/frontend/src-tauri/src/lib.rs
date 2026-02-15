@@ -15,6 +15,8 @@ pub fn run() {
     let plan_engine = Arc::new(sentinel_ai::plan_review_engine::PlanReviewEngine::new());
     let ria = Arc::new(sentinel_ai::response_integrity_analyzer::ResponseIntegrityAnalyzer::new());
     let remediation_engine = Arc::new(sentinel_endpoint::remediation::RemediationEngine::new());
+    let orchestrator = Arc::new(sentinel_malware::unified_alert_orchestrator::UnifiedAlertOrchestrator::new());
+    let auto_remediator = Arc::new(sentinel_malware::auto_remediator::AutoRemediator::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())
@@ -24,6 +26,8 @@ pub fn run() {
         .manage(plan_engine)
         .manage(ria)
         .manage(remediation_engine)
+        .manage(orchestrator)
+        .manage(auto_remediator)
         .invoke_handler(tauri::generate_handler![
             sentinel::get_status,
             sentinel::get_alerts,
@@ -59,6 +63,7 @@ pub fn run() {
             sentinel::set_ria_enabled,
             sentinel::get_remediation,
             sentinel::get_remediation_stats,
+            sentinel::one_click_remediate,
         ])
         .setup(|app| {
             // System tray with menu

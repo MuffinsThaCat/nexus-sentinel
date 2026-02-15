@@ -402,6 +402,7 @@ dependencies = [
  "sentinel-hardware",
  "sentinel-identity",
  "sentinel-iot",
+ "sentinel-malware",
  "sentinel-mgmt",
  "sentinel-microseg",
  "sentinel-mobile",
@@ -1100,6 +1101,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs-next"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b98cf8ebf19c3d1b223e151f99a4f9f0690dca41414773390fc824184ac833e1"
+dependencies = [
+ "cfg-if",
+ "dirs-sys-next",
+]
+
+[[package]]
 name = "dirs-sys"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1121,6 +1132,17 @@ dependencies = [
  "option-ext",
  "redox_users 0.5.2",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "dirs-sys-next"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ebda144c4fe02d1f7ea1a7d9641b6fc6b580adcfa024ae48797ecdeb6825b4d"
+dependencies = [
+ "libc",
+ "redox_users 0.4.6",
+ "winapi",
 ]
 
 [[package]]
@@ -2858,6 +2880,18 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.10.0",
+ "cfg-if",
+ "libc",
+ "memoffset",
+]
 
 [[package]]
 name = "no-std-net"
@@ -4779,6 +4813,42 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "sentinel-malware"
+version = "0.1.0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "blake3",
+ "byteorder",
+ "bytes",
+ "chrono",
+ "crossbeam",
+ "dashmap",
+ "dirs-next",
+ "flate2",
+ "glob",
+ "libc",
+ "lz4_flex",
+ "memmap2",
+ "nix",
+ "notify",
+ "parking_lot",
+ "rand 0.8.5",
+ "regex",
+ "reqwest 0.11.27",
+ "sentinel-core",
+ "sentinel-endpoint",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+ "xxhash-rust",
 ]
 
 [[package]]

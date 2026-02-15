@@ -86,9 +86,9 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Beaver Warrior ${{ github.ref_name }}'
           releaseBody: |
-            55 AI Agent Security modules, 38 security domains, 291 modules total.
-            Real-time malware detection, AI-powered remediation advice.
-            Local-first security. AI-powered intelligence. Your data stays yours.
+            58 AI Agent Security modules, 38 security domains, 273 modules total.
+            Universal one-click Fix It — Claude-powered remediation for every alert type.
+            Real-time malware detection. Local-first security. Your data stays yours.
 
             **Download for your platform below.**
           releaseDraft: false
@@ -179,7 +179,7 @@ jobs:
           {
             "version": "$VERSION",
             "download_url": "https://beaverwarrior.com/BeaverWarrior-macOS.zip",
-            "release_notes": "$GITHUB_REF_NAME — 55 AI Agent Security modules (7 world-first). 38 security domains, 291 modules total."
+            "release_notes": "$GITHUB_REF_NAME — 273 modules across 38 domains. Universal one-click Fix It for all alert types."
           }
           EOF
 

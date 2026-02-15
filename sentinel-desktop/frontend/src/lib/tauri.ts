@@ -671,3 +671,64 @@ export async function getRemediationStats(): Promise<RemediationStats> {
     return { total_requests: 0, cache_hits: 0, cache_size: 0, endpoint: '' };
   }
 }
+
+// ── One-Click Remediation (Fix It button) ─────────────────────────────────
+
+export interface OneClickAction {
+  id: string;
+  action_type: string;
+  status: string;
+  risk_level: string;
+  approval_level: string;
+  justification: string;
+  dry_run: boolean;
+  result?: { success: boolean; message: string; side_effects: string[] };
+}
+
+export interface OneClickReport {
+  request_id: string;
+  playbook_used?: string;
+  actions_taken: OneClickAction[];
+  total_duration_ms: number;
+  overall_success: boolean;
+  summary: string;
+}
+
+export interface ValidationFinding {
+  check: string;
+  severity: string;
+  message: string;
+}
+
+export interface ValidationResult {
+  passed: boolean;
+  confidence: number;
+  findings: ValidationFinding[];
+  filtered_actions: string[];
+  approved_actions: string[];
+}
+
+export interface OneClickResult {
+  gated?: boolean;
+  message?: string;
+  required_tier?: string;
+  claude_advice: string;
+  parsed_actions: string[];
+  validation?: ValidationResult;
+  report?: OneClickReport;
+  summary: string;
+}
+
+export async function oneClickRemediate(alert: UnifiedAlert): Promise<OneClickResult> {
+  try {
+    return await invoke<OneClickResult>('one_click_remediate', {
+      alertJson: JSON.stringify(alert),
+    });
+  } catch {
+    return {
+      claude_advice: '',
+      parsed_actions: [],
+      summary: 'Unable to execute one-click remediation at this time.',
+    };
+  }
+}
